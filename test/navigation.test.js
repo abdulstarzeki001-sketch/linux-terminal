@@ -23,7 +23,7 @@ test('Railway Neon page retains secure return to Wormstar on every screen',()=>{
 test('Real Railway password gate and xterm backend are not bypassed',()=>{
   assert.match(html,/id="pw" type="password"/);
   assert.match(html,/id="go" type="button">دخول/);
-  assert.match(html,/src="\/app\.js" defer/);
+  assert.match(html,/src="app\\.js" defer/);
   assert.match(html,/src="https:\/\/cdn\.jsdelivr\.net\/npm\/@xterm\/xterm@5\.5\.0\/lib\/xterm\.js"/);
   assert.match(js,/new WebSocket\(/);
   assert.match(js,/type:'auth', password:secret/);
@@ -81,4 +81,14 @@ test('Mobile terminal is top anchored when iPhone keyboard shortens viewport',()
   assert.match(css,/body\.keyboard-open \.terminal-shell\{border-top:0;border-radius:0\}/);
   assert.match(js,/visualViewport\.height/);
   assert.match(js,/keyboard-open/);
+});
+
+test('Terminal assets and WebSocket keep Wormstar same-origin paths',()=>{
+  assert.match(html,/href="neon\\.css"/);
+  assert.match(html,/src="app\\.js" defer/);
+  assert.doesNotMatch(html,/href="\\/neon\\.css"|src="\\/app\\.js"/);
+  assert.match(js,/location\\.pathname/);
+  assert.match(js,/['"]\\/terminal\\/ws['"]/);
+  assert.match(js,/['"]\\/ws['"]/);
+  assert.doesNotMatch(js,/up\\.railway\\.app\\/ws/);
 });
