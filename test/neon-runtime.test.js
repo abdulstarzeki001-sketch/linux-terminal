@@ -158,7 +158,8 @@ test('rejected password returns to login with a readable error',()=>{
   socket.open();
   socket.message({type:'error',message:'كلمة المرور غير صحيحة'});
   assert.equal(h.get('connectionPill').dataset.state,'disconnected');
-  assert.match(h.get('err').textContent,/كلمة المرور غير صحيحة/);
+  assert.match(h.get('err').textContent,/خادم Railway رفض الكلمة/);
+  assert.match(h.get('err').textContent,/الملء التلقائي/);
   assert.equal(h.get('login').classList.hidden,false);
 });
 
@@ -350,4 +351,47 @@ test('password and all shell input remain excluded from localStorage',()=>{
   h.lastTerminal().dataHandler('ls -la\n');
   assert.deepEqual([...h.prefs.keys()],historyBefore);
   assert.equal(JSON.stringify([...h.prefs]).includes('unit-test-only-password'),false);
+});
+
+
+test('iPhone reveals Railway field only on user tap and hides it again on logout',()=>{
+  const h=harness({mobile:true});
+  assert.equal(h.get('pw').type,'password');
+  h.get('revealPassword').events.click();
+  assert.equal(h.get('pw').type,'text');
+  assert.equal(h.get('revealPassword').attrs['aria-pressed'],'true');
+  assert.equal(h.get('revealPassword').textContent,'إخفاء');
+  h.get('revealPassword').events.click();
+  assert.equal(h.get('pw').type,'password');
+  h.get('pw').value='test-typed-secret-only';
+  const socket=h.connect();
+  socket.open();
+  assert.equal(socket.sent[0].password,'test-typed-secret-only');
+  socket.message({type:'ready'});
+  h.get('disconnect').events.click();
+  assert.equal(h.get('pw').value,'');
+  assert.equal(h.get('pw').type,'password');
+  assert.equal(h.get('revealPassword').attrs['aria-pressed'],'false');
+  assert.equal(JSON.stringify([...h.prefs]).includes('test-typed-secret-only'),false);
+});
+
+test('leading whitespace is flagged but not altered or stored in password transmission',()=>{
+  const h=harness();
+  h.get('pw').value='  intentional-leading-space';
+  const socket=h.get('go').events.click(),ws=h.connect();
+  // The second connect is blocked while the first handshake is pending.
+  assert.match(h.get('passwordHint').textContent,/مسافة طرفية/);
+  ws.open();
+  assert.equal(ws.sent[0].password,'  intentional-leading-space');
+  assert.equal(JSON.stringify([...h.prefs]).includes('intentional-leading-space'),false);
+});
+
+test('backend connection errors remain distinct from an actual Railway password rejection',()=>{
+  const h=harness();
+  const ws=h.connect();
+  ws.readyState=1;
+  ws.onerror();
+  ws.close();
+  assert.match(h.get('err').textContent,/WebSocket/);
+  assert.doesNotMatch(h.get('err').textContent,/خادم Railway رفض الكلمة/);
 });
