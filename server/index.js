@@ -13,6 +13,28 @@ const IDLE_MINUTES = Number(process.env.IDLE_MINUTES || 30);
 const MAX_SESSION_MINUTES = Number(process.env.MAX_SESSION_MINUTES || 120);
 const SHELL_HOME = process.env.TERMINAL_HOME || '/home/tuser';
 const MAX_AUTH_FAILURES = 3;
+const MAX_CONNECTIONS = 3;
+const AUTH_TIMEOUT_MS = 15 * 1000;
+const AUTH_WINDOW_MS = 15 * 60 * 1000;
+const MAX_AUTH_FAILURES_PER_ADDRESS = 12;
+const failuresByAddress = new Map();
+const connections = new Set();
+
+function getFailureState(address) {
+  const now = Date.now();
+  let state = failuresByAddress.get(address);
+  if (!state || now - state.start > AUTH_WINDOW_MS) {
+    state = { start: now, count: 0 };
+    failuresByAddress.set(address, state);
+  }
+  // Bound the in-memory table even when a reverse proxy sends many addresses.
+  if (failuresByAddress.size > 1000) {
+    for (const [key, value] of failuresByAddress) {
+      if (now - value.start > AUTH_WINDOW_MS) failuresByAddress.delete(key);
+    }
+  }
+  return state;
+}
 
 if (PASSWORD.length < 12) {
   console.error('TERMINAL_PASSWORD must be set and be at least 12 characters long.');
@@ -46,11 +68,60 @@ function send(ws, payload) {
 
 const app = express();
 app.disable('x-powered-by');
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
 app.use(express.static(path.join(__dirname, '..', 'web')));
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024 });
+const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
+
+function rejectUpgrade(socket, status, reason) {
+  if (socket.destroyed) return;
+  socket.end(
+    `HTTP/1.1 ${status} ${reason}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`
+  );
+}
+
+server.on('upgrade', (req, socket, head) => {
+  let pathname;
+  try { pathname = new URL(req.url, 'http://localhost').pathname; }
+  catch { return rejectUpgrade(socket, 400, 'Bad Request'); }
+
+  if (pathname !== '/ws') return rejectUpgrade(socket, 404, 'Not Found');
+
+  // The browser must connect from this site's own origin. Do not trust
+  // X-Forwarded-* headers supplied by an untrusted client for this check.
+  let origin;
+  try { origin = new URL(req.headers.origin); }
+  catch { return rejectUpgrade(socket, 403, 'Forbidden'); }
+  if (!['https:', 'http:'].includes(origin.protocol) ||
+      origin.host.toLowerCase() !== String(req.headers.host || '').toLowerCase()) {
+    return rejectUpgrade(socket, 403, 'Forbidden');
+  }
+
+  if (connections.size >= MAX_CONNECTIONS) {
+    return rejectUpgrade(socket, 503, 'Service Unavailable');
+  }
+
+  // Use the socket peer rather than caller-controlled forwarding headers.
+  const address = req.socket.remoteAddress || 'unknown';
+  if (getFailureState(address).count >= MAX_AUTH_FAILURES_PER_ADDRESS) {
+    return rejectUpgrade(socket, 429, 'Too Many Requests');
+  }
+
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    ws.clientAddress = address;
+    connections.add(ws);
+    ws.once('close', () => connections.delete(ws));
+    wss.emit('connection', ws, req);
+  });
+});
 
 wss.on('connection', (ws) => {
   let authed = false;
@@ -58,8 +129,10 @@ wss.on('connection', (ws) => {
   let term = null;
   let idleTimer = null;
   let maxTimer = null;
+  const authTimer = setTimeout(() => ws.close(1008, 'Authentication timeout'), AUTH_TIMEOUT_MS);
 
   const cleanup = () => {
+    clearTimeout(authTimer);
     clearTimeout(idleTimer);
     clearTimeout(maxTimer);
     if (term) {
@@ -77,7 +150,8 @@ wss.on('connection', (ws) => {
   };
 
   const startShell = () => {
-    term = pty.spawn('/bin/bash', ['-l'], {
+    try {
+      term = pty.spawn('/bin/bash', ['-l'], {
       name: 'xterm-256color',
       cols: 100,
       rows: 30,
@@ -94,6 +168,11 @@ wss.on('connection', (ws) => {
 
     resetIdle();
     send(ws, { type: 'ready' });
+    } catch (error) {
+      console.error('Unable to start terminal:', error.message);
+      send(ws, { type: 'error', message: 'تعذر تشغيل الطرفية' });
+      ws.close(1011, 'Terminal unavailable');
+    }
   };
 
   ws.on('message', (raw) => {
@@ -108,18 +187,24 @@ wss.on('connection', (ws) => {
       if (msg.type !== 'auth') return;
       if (!checkPassword(msg.password)) {
         failures += 1;
+        const record = getFailureState(ws.clientAddress);
+        record.count += 1;
         send(ws, { type: 'error', message: 'كلمة المرور غير صحيحة' });
-        if (failures >= MAX_AUTH_FAILURES) ws.close();
+        if (failures >= MAX_AUTH_FAILURES ||
+            record.count >= MAX_AUTH_FAILURES_PER_ADDRESS) ws.close();
         return;
       }
       authed = true;
+      clearTimeout(authTimer);
+      // Successful login clears recent failures for this peer.
+      failuresByAddress.delete(ws.clientAddress);
       startShell();
       return;
     }
 
     if (!term) return;
 
-    if (msg.type === 'input' && typeof msg.data === 'string') {
+    if (msg.type === 'input' && typeof msg.data === 'string' && msg.data.length <= 8192) {
       resetIdle();
       term.write(msg.data);
     } else if (msg.type === 'resize') {
