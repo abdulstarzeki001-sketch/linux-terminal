@@ -1,0 +1,37 @@
+name: Linux Terminal Security CI
+
+on:
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'web/**'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.github/workflows/terminal-ci.yml'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install backend dependencies
+        run: npm install --prefix server --no-audit --no-fund
+      - name: Run terminal contract tests
+        run: npm test --prefix server
+      - name: Parse frontend JavaScript
+        run: node --check web/app.js
+      - name: Build container
+        run: docker build --tag linux-terminal-security-ci .
+      - name: Verify container runs without root privileges
+        run: docker run --rm --entrypoint /bin/sh linux-terminal-security-ci -c 'test "$(id -u)" -ne 0 && ! command -v sudo >/dev/null 2>&1'
