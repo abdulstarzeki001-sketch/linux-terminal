@@ -12,6 +12,12 @@
   const connectButton = $('go');
   const disconnectButton = $('disconnect');
   const screen = $('term');
+  const extraKeys = $('mobileKeys');
+  const keysToggle = $('keysToggle');
+  const keyHint = $('keyHint');
+  const keyMods = {ctrl:false,alt:false,shift:false};
+  let keysExpanded = coarsePointer.matches;
+  let viewportBaseline = window.visualViewport?.height || 0;
   const statusBar = $('status');
   let ws = null;
   let term = null;
@@ -80,6 +86,11 @@
     $('clearOutput').disabled = !term;
     disconnectButton.disabled = !ws;
     connectButton.disabled = connecting;
+    $('pasteClipboard').disabled = !on;
+    keysToggle.disabled = !on;
+    keysToggle.setAttribute('aria-expanded',String(Boolean(on && keysExpanded)));
+    if (on && keysExpanded) extraKeys.classList.remove('hidden');
+    else extraKeys.classList.add('hidden');
     if (on) statusBar.textContent = 'CONNECTED · REAL LINUX BASH · WebSocket (WSS)';
   }
   function terminalPalette() {
@@ -98,7 +109,9 @@
   }
   function setTheme(theme) {
     if (!themeNames.has(theme)) return;
-    document.body.className = 'theme-' + theme;
+    // Preserve the iOS keyboard-open layout flag when changing themes.
+    for (const oldTheme of themeNames) document.body.classList.remove('theme-' + oldTheme);
+    document.body.classList.add('theme-' + theme);
     preferences.theme = theme;
     themeSelect.value = theme;
     save('theme',theme);
@@ -166,6 +179,8 @@
     term = null; fit = null;
     screen.replaceChildren();
     terminalReady = false;
+    resetModifiers();
+    document.body.classList.remove('keyboard-open');
     screen.style.display = 'none';
   }
   function showLogin(message) {
@@ -214,7 +229,7 @@
     connecting = false;
     setConnection('connected','متصل');
     setControls();
-    window.requestAnimationFrame(() => {doFit();term?.focus();});
+    window.requestAnimationFrame(() => {syncVisualViewport();doFit();term?.focus();});
     if ('ResizeObserver' in window) {
       resizeObserver = new ResizeObserver(() => window.requestAnimationFrame(doFit));
       resizeObserver.observe(screen);
@@ -312,6 +327,84 @@
     return lines.join('\n').slice(-50000);
   }
 
+
+  /* iOS Safari cannot replace the system keyboard from a website.
+     These accessible buttons send real PTY key sequences after login only. */
+  const literalKeys = Object.freeze({
+    slash:'/',pipe:'|',tilde:'~',dash:'-',underscore:'_',
+    backslash:'\\',colon:':',amp:'&',dollar:'$',quote:"'",
+    doublequote:'"',lt:'<',gt:'>'
+  });
+  const specialKeys = Object.freeze({
+    esc:'\x1b',tab:'\t',enter:'\r',backspace:'\x7f',
+    delete:'\x1b[3~',home:'\x1b[H',end:'\x1b[F',
+    pageup:'\x1b[5~',pagedown:'\x1b[6~',
+    up:'\x1b[A',down:'\x1b[B',right:'\x1b[C',left:'\x1b[D'
+  });
+  const arrowFinals = {up:'A',down:'B',right:'C',left:'D'};
+  function resetModifiers() {
+    for (const name of Object.keys(keyMods)) keyMods[name] = false;
+    updateModifiers();
+  }
+  function updateModifiers() {
+    const nodes = document.querySelectorAll('[data-mod]');
+    for (const button of nodes) {
+      const value = Boolean(keyMods[button.dataset.mod]);
+      button.setAttribute('aria-pressed',String(value));
+    }
+    if (keyHint) {
+      const active = Object.keys(keyMods).filter(x => keyMods[x]);
+      keyHint.textContent = active.length
+        ? active.map(x=>x.toUpperCase()).join(' + ')+' — اضغط الحرف أو السهم التالي'
+        : 'الأزرار ترسل مفاتيح للخادم الحقيقي';
+    }
+  }
+  function sequenceForKey(name) {
+    let result = null;
+    if (name.startsWith('ctrl-') && /^[a-z]$/.test(name.slice(5))) {
+      result = String.fromCharCode(name.charCodeAt(5)-96);
+    } else if (name.startsWith('letter-') && /^[a-z]$/.test(name.slice(7))) {
+      const letter = name.slice(7);
+      result = keyMods.ctrl
+        ? String.fromCharCode(letter.charCodeAt(0)-96)
+        : keyMods.shift ? letter.toUpperCase() : letter;
+      if (keyMods.alt) result = '\x1b' + result;
+    } else if (Object.hasOwn(specialKeys,name)) {
+      result = specialKeys[name];
+      if (Object.hasOwn(arrowFinals,name) &&
+          (keyMods.ctrl || keyMods.alt || keyMods.shift)) {
+        const modifier = 1+(keyMods.shift?1:0)+(keyMods.alt?2:0)+(keyMods.ctrl?4:0);
+        result = '\x1b[1;'+modifier+arrowFinals[name];
+      } else if (keyMods.alt) result='\x1b'+result;
+    } else if (Object.hasOwn(literalKeys,name)) {
+      result=literalKeys[name];
+      if(keyMods.ctrl && name==='backslash')result='\x1c';
+      else if(keyMods.ctrl && name==='underscore')result='\x1f';
+      if(keyMods.alt)result='\x1b'+result;
+    }
+    resetModifiers();
+    return result;
+  }
+  function sendExtraKey(name) {
+    if (!terminalReady || !ws || ws.readyState !== WebSocket.OPEN) return;
+    const sequence = sequenceForKey(name);
+    if (sequence === null) return;
+    send({type:'input',data:sequence});
+    term?.focus();
+  }
+  function syncVisualViewport() {
+    if (!coarsePointer.matches || !window.visualViewport) return;
+    const height = window.visualViewport.height;
+    if (!Number.isFinite(height) || height < 150) return;
+    viewportBaseline = Math.max(viewportBaseline,height);
+    document.documentElement?.style?.setProperty(
+      '--terminal-viewport-height',Math.round(height)+'px'
+    );
+    const keyboardOpen = terminalReady && viewportBaseline-height>125;
+    document.body.classList.toggle('keyboard-open',keyboardOpen);
+    if (terminalReady) window.requestAnimationFrame(doFit);
+  }
+
   themeSelect.addEventListener('change',e=>{setTheme(e.target.value);beep();});
   $('matrixToggle').addEventListener('click',()=>{
     preferences.matrix = !preferences.matrix;
@@ -335,12 +428,57 @@
       notify('تم نسخ المخرجات');
     } catch (_) {notify('نسخ المخرجات غير متاح في هذا المتصفح');}
   });
+
+  // The extra-key tray is not shown and cannot send commands before auth.
+  keysToggle.addEventListener('click',()=>{
+    if (!terminalReady) return;
+    keysExpanded = !keysExpanded;
+    setControls();
+    window.requestAnimationFrame(doFit);
+    if(keysExpanded)term?.focus();
+  });
+  extraKeys.addEventListener('click',event=>{
+    const button = event.target.closest('button');
+    if (!button || !terminalReady) return;
+    if (button.id === 'showNativeKeyboard') {
+      term?.focus();
+      notify('يمكن استخدام كيبورد الآيفون مع مفاتيح Ctrl وEsc الإضافية');
+      return;
+    }
+    const mod=button.dataset.mod;
+    if(mod && Object.hasOwn(keyMods,mod)) {
+      keyMods[mod]=!keyMods[mod];
+      updateModifiers();
+      term?.focus();
+      return;
+    }
+    if(button.dataset.key)sendExtraKey(button.dataset.key);
+  });
+  $('pasteClipboard').addEventListener('click',async()=>{
+    if(!terminalReady || !ws || ws.readyState!==WebSocket.OPEN)return;
+    try{
+      const text=await navigator.clipboard.readText();
+      // Deliberate user gesture. No auto-paste or clipboard logging.
+      if(!text)return;
+      if(text.length>4096){
+        notify('النص أطول من 4096 حرفاً؛ اختصره قبل لصقه');
+        return;
+      }
+      send({type:'input',data:text});
+      term?.focus();
+    }catch(_){notify('اسمح باللصق من Safari، أو الصق عبر كيبورد الآيفون');}
+  });
   disconnectButton.addEventListener('click',disconnect);
   connectButton.addEventListener('click',connect);
   password.addEventListener('keydown',event=>{
     if(event.key==='Enter'){event.preventDefault();connect();}
   });
-  window.addEventListener('resize',()=>{if(terminalReady)doFit();if(rainRunning)canvasResize();});
+  window.addEventListener('resize',()=>{if(terminalReady)doFit();if(rainRunning)canvasResize();syncVisualViewport();});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',syncVisualViewport);
+    window.visualViewport.addEventListener('scroll',syncVisualViewport);
+  }
+  window.addEventListener('orientationchange',()=>{viewportBaseline=0;syncVisualViewport();});
   document.addEventListener('visibilitychange',updateMatrix);
   if(typeof reduced.addEventListener==='function')reduced.addEventListener('change',updateMatrix);
   window.addEventListener('pagehide',disconnect);
@@ -348,5 +486,7 @@
   setTheme(preferences.theme);
   updateSound();
   updateMatrix();
+  resetModifiers();
+  syncVisualViewport();
   showLogin('');
 })();
