@@ -55,6 +55,8 @@
         <button type="button" id="soundToggle" class="tool" aria-pressed="false">♪ Sound</button>
         <button type="button" id="copyOutput" class="tool" disabled>نسخ المخرجات</button>
         <button type="button" id="clearOutput" class="tool" disabled>مسح الشاشة</button>
+        <button type="button" id="pasteClipboard" class="tool" disabled>لصق</button>
+        <button type="button" id="keysToggle" class="tool" aria-controls="mobileKeys" aria-expanded="false" disabled>⌨ مفاتيح إضافية</button>
         <button type="button" id="disconnect" class="tool" disabled>قطع الاتصال</button>
       </div>
 
@@ -71,6 +73,83 @@
         </div>
         <div id="status" class="hidden" role="status" aria-live="polite">جارٍ الاتصال…</div>
         <div id="term" aria-label="طرفية Linux التفاعلية" tabindex="0"></div>
+        <div id="mobileKeys" class="extra-keys hidden" dir="ltr" aria-label="مفاتيح Linux الإضافية" role="group">
+          <div class="extra-keys-heading" dir="rtl"><span>⌨ مفاتيح الطرفية الاحترافية</span><span id="keyHint">الأزرار ترسل مفاتيح للخادم الحقيقي</span></div>
+          <div class="key-row" role="group" aria-label="مفاتيح التنقل">
+            <button type="button" class="key-btn" data-key="esc">Esc</button>
+            <button type="button" class="key-btn" data-key="tab">Tab</button>
+            <button type="button" class="key-btn" data-key="up" aria-label="سهم للأعلى">↑</button>
+            <button type="button" class="key-btn" data-key="down" aria-label="سهم للأسفل">↓</button>
+            <button type="button" class="key-btn" data-key="left" aria-label="سهم لليسار">←</button>
+            <button type="button" class="key-btn" data-key="right" aria-label="سهم لليمين">→</button>
+            <button type="button" class="key-btn" data-key="enter">Enter ↵</button>
+            <button type="button" class="key-btn" data-key="backspace">⌫</button>
+            <button type="button" class="key-btn" data-key="delete">Del</button>
+          </div>
+          <div class="key-row" role="group" aria-label="المفاتيح الخاصة والاختصارات">
+            <button type="button" class="key-btn key-mod" data-mod="ctrl" aria-pressed="false">Ctrl</button>
+            <button type="button" class="key-btn key-mod" data-mod="alt" aria-pressed="false">Alt</button>
+            <button type="button" class="key-btn key-mod" data-mod="shift" aria-pressed="false">Shift</button>
+            <button type="button" class="key-btn" data-key="home">Home</button>
+            <button type="button" class="key-btn" data-key="end">End</button>
+            <button type="button" class="key-btn" data-key="pageup">PgUp</button>
+            <button type="button" class="key-btn" data-key="pagedown">PgDn</button>
+            <button type="button" class="key-btn key-mod" id="fnToggle" aria-controls="functionKeys" aria-expanded="false">Fn · F1–F12</button>
+            <button type="button" class="key-btn key-quick" data-key="ctrl-c">^C</button>
+            <button type="button" class="key-btn key-quick" data-key="ctrl-d">^D</button>
+            <button type="button" class="key-btn key-quick" data-key="ctrl-z">^Z</button>
+            <button type="button" class="key-btn key-quick" data-key="ctrl-l">^L</button>
+            <button type="button" class="key-btn key-quick" data-key="ctrl-r">^R</button>
+          </div>
+          <div class="key-row" role="group" aria-label="الرموز والأحرف التقنية">
+            <button type="button" class="key-btn" data-key="letter-a">A</button>
+            <button type="button" class="key-btn" data-key="letter-c">C</button>
+            <button type="button" class="key-btn" data-key="letter-d">D</button>
+            <button type="button" class="key-btn" data-key="letter-l">L</button>
+            <button type="button" class="key-btn" data-key="letter-r">R</button>
+            <button type="button" class="key-btn" data-key="letter-z">Z</button>
+            <button type="button" class="key-btn" data-key="slash">/</button>
+            <button type="button" class="key-btn" data-key="pipe">|</button>
+            <button type="button" class="key-btn" data-key="tilde">~</button>
+            <button type="button" class="key-btn" data-key="dash">-</button>
+            <button type="button" class="key-btn" data-key="underscore">_</button>
+            <button type="button" class="key-btn" data-key="backslash">\</button>
+            <button type="button" class="key-btn" data-key="colon">:</button>
+            <button type="button" class="key-btn" data-key="amp">&amp;</button>
+            <button type="button" class="key-btn" data-key="dollar">$</button>
+            <button type="button" class="key-btn" data-key="quote">'</button>
+            <button type="button" class="key-btn" data-key="doublequote">&quot;</button>
+            <button type="button" class="key-btn" data-key="lt">&lt;</button>
+            <button type="button" class="key-btn" data-key="gt">&gt;</button>
+            <button type="button" class="key-btn key-soft" id="showNativeKeyboard">⌨ لوحة الآيفون</button>
+          </div>
+          <div class="key-row hidden" id="functionKeys" role="group" aria-label="أزرار الوظائف والرموز الإضافية">
+            <button type="button" class="key-btn" data-key="f1">F1</button>
+            <button type="button" class="key-btn" data-key="f2">F2</button>
+            <button type="button" class="key-btn" data-key="f3">F3</button>
+            <button type="button" class="key-btn" data-key="f4">F4</button>
+            <button type="button" class="key-btn" data-key="f5">F5</button>
+            <button type="button" class="key-btn" data-key="f6">F6</button>
+            <button type="button" class="key-btn" data-key="f7">F7</button>
+            <button type="button" class="key-btn" data-key="f8">F8</button>
+            <button type="button" class="key-btn" data-key="f9">F9</button>
+            <button type="button" class="key-btn" data-key="f10">F10</button>
+            <button type="button" class="key-btn" data-key="f11">F11</button>
+            <button type="button" class="key-btn" data-key="f12">F12</button>
+            <button type="button" class="key-btn" data-key="insert">Ins</button>
+            <button type="button" class="key-btn" data-key="space">Space</button>
+            <button type="button" class="key-btn" data-key="openbracket">[</button>
+            <button type="button" class="key-btn" data-key="closebracket">]</button>
+            <button type="button" class="key-btn" data-key="openbrace">{</button>
+            <button type="button" class="key-btn" data-key="closebrace">}</button>
+            <button type="button" class="key-btn" data-key="semicolon">;</button>
+            <button type="button" class="key-btn" data-key="equals">=</button>
+            <button type="button" class="key-btn" data-key="plus">+</button>
+            <button type="button" class="key-btn" data-key="at">@</button>
+            <button type="button" class="key-btn" data-key="hash">#</button>
+            <button type="button" class="key-btn" data-key="backtick">`</button>
+          </div>
+        </div>
       </div>
       <footer class="terminal-footer">
         <span>⚡ <strong>REAL BASH</strong> · Railway Container</span>

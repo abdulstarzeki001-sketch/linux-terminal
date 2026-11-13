@@ -27,7 +27,8 @@ test('Real Railway password gate and xterm backend are not bypassed',()=>{
   assert.match(html,/src="https:\/\/cdn\.jsdelivr\.net\/npm\/@xterm\/xterm@5\.5\.0\/lib\/xterm\.js"/);
   assert.match(js,/new WebSocket\(/);
   assert.match(js,/type:'auth', password:secret/);
-  assert.match(js,/term\.onData\(data\s*=>\s*send\(\{type:'input',data\}\)\)/);
+  assert.match(js,/term\.onData\(data\s*=>\s*\{/);
+  assert.match(js,/send\(\{type:'input',data\}\)/);
   assert.match(js,/new window\.Terminal\(/);
   assert.doesNotMatch(js,/const CMD\s*=|const S\s*=|function fsResolve\(|virtual filesystem|neofetch\(\)/i);
   assert.doesNotMatch(html,/id="termInput"/);

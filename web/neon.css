@@ -139,3 +139,42 @@ a{text-decoration:none}
  *,*::before,*::after{animation:none!important;transition:none!important}
  #matrix{display:none}
 }
+
+/* Real PTY additional keys: always bound to the authenticated WebSocket.
+   The iOS keyboard cannot be replaced by a website; this tray supplements it. */
+.extra-keys{flex:0 0 auto;display:flex;flex-direction:column;min-width:0;
+ padding:6px 9px calc(5px + env(safe-area-inset-bottom,0px));
+ border-top:1px solid var(--border);background:var(--panel-alt);
+ box-shadow:0 -10px 24px rgba(0,0,0,.10)}
+.extra-keys-heading{display:flex;justify-content:space-between;gap:9px;
+ color:var(--muted);font-size:10px;padding:1px 4px 3px}
+.key-row{display:flex;flex:0 0 auto;gap:5px;min-width:0;overflow-x:auto;
+ padding:3px 0 6px;scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+ overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x}
+.key-btn{flex:0 0 auto;min-width:39px;min-height:38px;padding:6px 10px;
+ border:1px solid var(--border);border-radius:9px;background:var(--panel);
+ color:var(--text);font:650 12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;
+ cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+ touch-action:manipulation}
+.key-btn:hover{border-color:var(--neon);color:var(--neon)}
+.key-btn:active{transform:translateY(1px);filter:brightness(1.2)}
+.key-btn:disabled{opacity:.45;cursor:not-allowed}
+.key-mod{border-color:var(--neon);color:var(--neon)}
+.key-mod[aria-pressed="true"]{background:var(--neon);color:var(--bg);font-weight:900}
+.key-quick{color:var(--green);border-color:color-mix(in srgb,var(--green) 32%,transparent)}
+.key-soft{color:var(--neon2);border-color:var(--neon2)}
+@media(max-width:650px){
+ .app-frame{height:var(--terminal-viewport-height,100dvh)}
+ .extra-keys{padding-inline:7px}
+ .extra-keys-heading{font-size:10px}
+ .key-btn{min-height:39px;padding:7px 10px;font-size:12px}
+ .terminal-stage{min-height:0}
+ body.keyboard-open .site-header,body.keyboard-open .toolbar,
+ body.keyboard-open .terminal-footer{display:none}
+ body.keyboard-open .extra-keys-heading{display:none}
+ body.keyboard-open .extra-keys{padding:2px 7px 0}
+ body.keyboard-open .key-btn{min-height:32px;padding:5px 9px}
+ body.keyboard-open .key-row{padding:2px 0 4px}
+ body.keyboard-open .titlebar{min-height:35px;padding:6px 10px}
+}
+@media(prefers-reduced-motion:reduce){.key-btn:active{transform:none}}
