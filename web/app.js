@@ -326,7 +326,7 @@
         const upstreamMessage = typeof message.message==='string'
           ? message.message.slice(0,250) : 'تعذّرت المصادقة';
         authFailure = upstreamMessage === 'كلمة المرور غير صحيحة'
-          ? 'خادم Railway رفض الكلمة المُرسلة. امسح تعبئة الآيفون التلقائية واكتب كلمة Railway يدوياً، ثم استخدم زر إظهار للتأكد.'
+          ? 'خادم Railway رفض الكلمة المُرسلة. امسح الملء التلقائي من الآيفون واكتب كلمة Railway يدوياً، ثم استخدم زر إظهار للتأكد.'
           : upstreamMessage;
         socket.close();
       }
