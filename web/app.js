@@ -188,7 +188,7 @@
   }
   function startTerminal() {
     if (terminalReady) return;
-    if (typeof Terminal !== 'function' || typeof FitAddon?.FitAddon !== 'function') {
+    if (typeof window.Terminal !== 'function' && typeof Terminal !== 'function' || typeof window.FitAddon?.FitAddon !== 'function') {
       throw Error('تعذر تحميل مكتبة xterm.js. تحقق من اتصال الإنترنت.');
     }
     login.classList.add('hidden');
