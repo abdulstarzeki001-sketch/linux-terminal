@@ -5,7 +5,8 @@
   "description": "Password-protected web terminal that runs a real bash shell",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --check index.js && node --test test/*.test.js"
   },
   "engines": {
     "node": ">=20"
