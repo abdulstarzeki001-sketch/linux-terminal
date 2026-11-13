@@ -188,13 +188,13 @@
   }
   function startTerminal() {
     if (terminalReady) return;
-    if (typeof window.Terminal !== 'function' && typeof Terminal !== 'function' || typeof window.FitAddon?.FitAddon !== 'function') {
+    if (typeof window.Terminal !== 'function' || typeof window.FitAddon?.FitAddon !== 'function') {
       throw Error('تعذر تحميل مكتبة xterm.js. تحقق من اتصال الإنترنت.');
     }
     login.classList.add('hidden');
     screen.style.display = 'block';
     statusBar.classList.remove('hidden');
-    term = new Terminal({
+    term = new window.Terminal({
       cursorBlink:!reduced.matches,
       convertEol:false,
       scrollback:5000,
@@ -205,7 +205,7 @@
       theme:terminalPalette(),
       allowTransparency:false
     });
-    fit = new FitAddon.FitAddon();
+    fit = new window.FitAddon.FitAddon();
     term.loadAddon(fit);
     term.open(screen);
     term.onData(data => send({type:'input',data}));
@@ -227,7 +227,7 @@
     if (connecting || ws?.readyState === WebSocket.OPEN) return;
     let secret = password.value;
     if (!secret) { error.textContent = 'أدخل كلمة المرور أولاً';return; }
-    if (typeof Terminal !== 'function' || !window.FitAddon?.FitAddon) {
+    if (typeof window.Terminal !== 'function' || typeof window.FitAddon?.FitAddon !== 'function') {
       secret = '';
       error.textContent = 'مكتبة الطرفية لم تُحمّل، تحقق من الإنترنت وأعد المحاولة.';
       return;
