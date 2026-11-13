@@ -363,8 +363,7 @@ test('iPhone reveals Railway field only on user tap and hides it again on logout
   assert.equal(h.get('revealPassword').textContent,'إخفاء');
   h.get('revealPassword').events.click();
   assert.equal(h.get('pw').type,'password');
-  h.get('pw').value='test-typed-secret-only';
-  const socket=h.connect();
+  const socket=h.connect('test-typed-secret-only');
   socket.open();
   assert.equal(socket.sent[0].password,'test-typed-secret-only');
   socket.message({type:'ready'});
