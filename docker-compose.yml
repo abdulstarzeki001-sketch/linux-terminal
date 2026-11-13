@@ -1,0 +1,15 @@
+services:
+  terminal:
+    build: .
+    image: linux-terminal:latest
+    env_file: .env
+    ports:
+      # Bound to localhost only. Put a reverse proxy with HTTPS in front of it before exposing it.
+      - "127.0.0.1:8080:8080"
+    mem_limit: 1g
+    memswap_limit: 1g
+    cpus: 1.0
+    pids_limit: 512
+    tmpfs:
+      - /tmp:size=256m
+    restart: "no"

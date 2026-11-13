@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Linux Terminal</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css">
+  <style>
+    html, body { margin: 0; height: 100%; background: #0b0f14; color: #ddd; }
+    body { display: flex; flex-direction: column; font-family: system-ui, sans-serif; }
+    #login { margin: auto; display: flex; flex-direction: column; gap: 12px; width: min(90vw, 320px); }
+    #login h2 { margin: 0 0 4px; font-weight: 600; }
+    input, button { font-size: 16px; padding: 10px 12px; border-radius: 6px; border: 1px solid #334; background: #141a22; color: #eee; }
+    button { cursor: pointer; background: #1f6feb; border: none; color: #fff; }
+    button:disabled { opacity: 0.6; cursor: default; }
+    #err { color: #f88; min-height: 1.2em; font-size: 14px; }
+    #status { font-size: 13px; padding: 6px 10px; background: #111820; color: #8b9bb0; direction: ltr; text-align: left; }
+    #term { flex: 1; display: none; padding: 6px; direction: ltr; min-height: 0; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="login">
+    <h2>الترمنال</h2>
+    <input id="pw" type="password" placeholder="كلمة المرور" autocomplete="current-password">
+    <button id="go">دخول</button>
+    <div id="err"></div>
+  </div>
+  <div id="status" class="hidden">connecting…</div>
+  <div id="term"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
