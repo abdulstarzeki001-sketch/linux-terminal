@@ -30,15 +30,8 @@
     </header>
 
     <main class="terminal-shell">
-      <div class="titlebar">
-        <div class="traffic" aria-hidden="true">
-          <span class="dot red"></span>
-          <span class="dot yellow"></span>
-          <span class="dot green"></span>
-        </div>
-        <span class="window-title">⚡ railway@wormstar — bash</span>
-        <span class="connection-pill" id="connectionPill" data-state="locked" role="status" aria-live="polite">محمي</span>
-      </div>
+      <!-- Connection state remains available to screen readers without a visual banner. -->
+      <span class="sr-only" id="connectionPill" data-state="locked" role="status" aria-live="polite">محمي</span>
 
       <div class="toolbar" aria-label="أدوات واجهة الطرفية">
         <label class="theme-control" for="themeSelect">
@@ -71,7 +64,7 @@
           <div id="err" role="alert" aria-live="assertive"></div>
           <p class="login-note">الاتصال مشفّر عبر HTTPS / WSS. الأوامر تُنفّذ على خادم Linux وليس داخل المتصفح.</p>
         </div>
-        <div id="status" class="hidden" role="status" aria-live="polite">جارٍ الاتصال…</div>
+        <div id="status" class="sr-only hidden" role="status" aria-live="polite">جارٍ الاتصال…</div>
         <div id="term" aria-label="طرفية Linux التفاعلية" tabindex="0"></div>
         <div id="mobileKeys" class="extra-keys hidden" dir="ltr" aria-label="مفاتيح Linux الإضافية" role="group">
           <div class="extra-keys-heading" dir="rtl"><span>⌨ مفاتيح الطرفية الاحترافية</span><span id="keyHint">الأزرار ترسل مفاتيح للخادم الحقيقي</span></div>
