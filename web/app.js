@@ -17,6 +17,7 @@
   const keyHint = $('keyHint');
   const keyMods = {ctrl:false,alt:false,shift:false};
   let keysExpanded = coarsePointer.matches;
+  let fnExpanded = false;
   let viewportBaseline = window.visualViewport?.height || 0;
   const statusBar = $('status');
   let ws = null;
@@ -91,6 +92,9 @@
     keysToggle.setAttribute('aria-expanded',String(Boolean(on && keysExpanded)));
     if (on && keysExpanded) extraKeys.classList.remove('hidden');
     else extraKeys.classList.add('hidden');
+    $('fnToggle').setAttribute('aria-expanded',String(Boolean(on && fnExpanded)));
+    if(on && fnExpanded && keysExpanded) $('functionKeys').classList.remove('hidden');
+    else $('functionKeys').classList.add('hidden');
     if (on) statusBar.textContent = 'CONNECTED · REAL LINUX BASH · WebSocket (WSS)';
   }
   function terminalPalette() {
@@ -179,6 +183,7 @@
     term = null; fit = null;
     screen.replaceChildren();
     terminalReady = false;
+    fnExpanded=false;
     resetModifiers();
     document.body.classList.remove('keyboard-open');
     screen.style.display = 'none';
@@ -223,7 +228,18 @@
     fit = new window.FitAddon.FitAddon();
     term.loadAddon(fit);
     term.open(screen);
-    term.onData(data => send({type:'input',data}));
+    term.onData(data => {
+      // Apply the on-screen Ctrl / Alt / Shift modifier to the next letter
+      // typed on the native iPhone keyboard, not only to virtual letter keys.
+      if ((keyMods.ctrl || keyMods.alt || keyMods.shift) &&
+          data.length===1 && /^[a-zA-Z]$/.test(data)) {
+        const sequence=sequenceForKey('letter-'+data.toLowerCase());
+        if(sequence!==null)send({type:'input',data:sequence});
+      } else if (keyMods.alt && data.length===1) {
+        send({type:'input',data:'\x1b'+data});
+        resetModifiers();
+      } else send({type:'input',data});
+    });
     term.onResize(({cols,rows}) => send({type:'resize',cols,rows}));
     terminalReady = true;
     connecting = false;
@@ -333,12 +349,17 @@
   const literalKeys = Object.freeze({
     slash:'/',pipe:'|',tilde:'~',dash:'-',underscore:'_',
     backslash:'\\',colon:':',amp:'&',dollar:'$',quote:"'",
-    doublequote:'"',lt:'<',gt:'>'
+    doublequote:'"',lt:'<',gt:'>',space:' ',openbracket:'[',
+    closebracket:']',openbrace:'{',closebrace:'}',semicolon:';',
+    equals:'=',plus:'+',at:'@',hash:'#',backtick:'`'
   });
   const specialKeys = Object.freeze({
     esc:'\x1b',tab:'\t',enter:'\r',backspace:'\x7f',
     delete:'\x1b[3~',home:'\x1b[H',end:'\x1b[F',
-    pageup:'\x1b[5~',pagedown:'\x1b[6~',
+    pageup:'\x1b[5~',pagedown:'\x1b[6~',insert:'\x1b[2~',
+    f1:'\x1bOP',f2:'\x1bOQ',f3:'\x1bOR',f4:'\x1bOS',
+    f5:'\x1b[15~',f6:'\x1b[17~',f7:'\x1b[18~',f8:'\x1b[19~',
+    f9:'\x1b[20~',f10:'\x1b[21~',f11:'\x1b[23~',f12:'\x1b[24~',
     up:'\x1b[A',down:'\x1b[B',right:'\x1b[C',left:'\x1b[D'
   });
   const arrowFinals = {up:'A',down:'B',right:'C',left:'D'};
@@ -440,6 +461,13 @@
   extraKeys.addEventListener('click',event=>{
     const button = event.target.closest('button');
     if (!button || !terminalReady) return;
+    if (button.id === 'fnToggle') {
+      fnExpanded=!fnExpanded;
+      setControls();
+      term?.focus();
+      window.requestAnimationFrame(doFit);
+      return;
+    }
     if (button.id === 'showNativeKeyboard') {
       term?.focus();
       notify('يمكن استخدام كيبورد الآيفون مع مفاتيح Ctrl وEsc الإضافية');
