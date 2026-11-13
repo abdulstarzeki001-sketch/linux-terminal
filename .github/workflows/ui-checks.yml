@@ -29,4 +29,4 @@ jobs:
       - name: Check browser JS syntax
         run: node --check web/app.js
       - name: Check return navigation and existing login
-        run: node --test test/navigation.test.js
+        run: node --test test/*.test.js

@@ -2,61 +2,85 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
-  <title>Linux Terminal</title>
+  <meta name="theme-color" content="#1e1e2e">
+  <title>⚡ Wormstar Neon Terminal — Railway Linux</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css">
-  <style>
-    html, body { margin: 0; height: 100%; background: #0b0f14; color: #ddd; }
-    body { display: flex; flex-direction: column; font-family: system-ui, sans-serif; }
-    #login { margin: auto; display: flex; flex-direction: column; gap: 12px; width: min(90vw, 320px); }
-    #login h2 { margin: 0 0 4px; font-weight: 600; }
-    input, button { font-size: 16px; padding: 10px 12px; border-radius: 6px; border: 1px solid #334; background: #141a22; color: #eee; }
-    button { cursor: pointer; background: #1f6feb; border: none; color: #fff; }
-    button:disabled { opacity: 0.6; cursor: default; }
-    #err { color: #f88; min-height: 1.2em; font-size: 14px; }
-    #status { font-size: 13px; padding: 6px 10px; background: #111820; color: #8b9bb0; direction: ltr; text-align: left; }
-    #term { flex: 1; display: none; padding: 6px; direction: ltr; min-height: 0; }
-    .hidden { display: none !important; }
-    .site-header { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 12px 16px; border-bottom: 1px solid #273647; background: #111820; flex: 0 0 auto; }
-    .site-label { color: #9aacc1; font-weight: 600; font-size: 13px; }
-    .back-to-wormstar { display: inline-flex; gap: 8px; align-items: center; justify-content: center;
-      padding: 9px 12px; border: 1px solid #345c62; border-radius: 9px;
-      background: #153637; color: #91f1d4; font-size: 14px; font-weight: 700; text-decoration: none;
-      min-height: 42px; }
-    .back-to-wormstar:hover { background: #205052; color: #fff; }
-    .back-to-wormstar:focus-visible { outline: 2px solid #91f1d4; outline-offset: 3px; }
-    @media (max-width: 520px) {
-      .site-header { padding: 10px 12px; }
-      .site-label { font-size: 12px; }
-      .back-to-wormstar { font-size: 13px; padding: 8px 10px; }
-    }
-  </style>
+  <link rel="stylesheet" href="/neon.css">
 </head>
-<body>
-  <header class="site-header">
-    <span class="site-label">Linux Terminal · Railway</span>
-    <a class="back-to-wormstar"
-       href="https://wormstar-ai-lab.abdulstarzeki001.workers.dev/"
-       rel="noreferrer"
-       referrerpolicy="no-referrer"
-       aria-label="العودة إلى Wormstar AI Lab">
-      <span aria-hidden="true">→</span>
-      <span>العودة إلى Wormstar</span>
-    </a>
-  </header>
-  <div id="login">
-    <h2>الترمنال</h2>
-    <input id="pw" type="password" placeholder="كلمة المرور" autocomplete="current-password">
-    <button id="go">دخول</button>
-    <div id="err"></div>
-  </div>
-  <div id="status" class="hidden">connecting…</div>
-  <div id="term"></div>
+<body class="theme-catppuccin">
+  <canvas id="matrix" aria-hidden="true"></canvas>
+  <div id="toast" role="status" aria-live="polite"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
-  <script src="/app.js"></script>
+  <div class="app-frame">
+    <header class="site-header">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">⚡</span>
+        <div class="brand-text">
+          <span class="site-label">WORMSTAR · NEON TERMINAL</span>
+          <span class="sub-label">Railway / Real Linux Bash / Secure WebSocket</span>
+        </div>
+      </div>
+      <a class="back-to-wormstar"
+         href="https://wormstar-ai-lab.abdulstarzeki001.workers.dev/"
+         rel="noreferrer"
+         referrerpolicy="no-referrer"
+         aria-label="العودة إلى Wormstar AI Lab"><span aria-hidden="true">↩</span> العودة إلى Wormstar</a>
+    </header>
+
+    <main class="terminal-shell">
+      <div class="titlebar">
+        <div class="traffic" aria-hidden="true">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="window-title">⚡ railway@wormstar — bash</span>
+        <span class="connection-pill" id="connectionPill" data-state="locked" role="status" aria-live="polite">محمي</span>
+      </div>
+
+      <div class="toolbar" aria-label="أدوات واجهة الطرفية">
+        <label class="theme-control" for="themeSelect">
+          <span>🎨 الثيم</span>
+          <select id="themeSelect" aria-label="اختر ألوان الطرفية">
+            <option value="catppuccin">Catppuccin</option>
+            <option value="neon">Neon</option>
+            <option value="dracula">Dracula</option>
+            <option value="tokyo">Tokyo Night</option>
+            <option value="gruvbox">Gruvbox</option>
+          </select>
+        </label>
+        <button type="button" id="matrixToggle" class="tool" aria-pressed="false">◈ Matrix</button>
+        <button type="button" id="soundToggle" class="tool" aria-pressed="false">♪ Sound</button>
+        <button type="button" id="copyOutput" class="tool" disabled>نسخ المخرجات</button>
+        <button type="button" id="clearOutput" class="tool" disabled>مسح الشاشة</button>
+        <button type="button" id="disconnect" class="tool" disabled>قطع الاتصال</button>
+      </div>
+
+      <div class="terminal-stage">
+        <div id="login">
+          <div class="login-icon" aria-hidden="true">⌘</div>
+          <h2>الدخول إلى Linux Terminal</h2>
+          <p class="login-caption">جلسة Bash حقيقية داخل حاوية Railway. أدخل كلمة المرور الخاصة بالطرفية؛ لن تُخزَّن في المتصفح.</p>
+          <label for="pw" class="field-label">كلمة مرور Railway</label>
+          <input id="pw" type="password" placeholder="••••••••••••" autocomplete="current-password" required>
+          <button id="go" type="button">دخول</button>
+          <div id="err" role="alert" aria-live="assertive"></div>
+          <p class="login-note">الاتصال مشفّر عبر HTTPS / WSS. الأوامر تُنفّذ على خادم Linux وليس داخل المتصفح.</p>
+        </div>
+        <div id="status" class="hidden" role="status" aria-live="polite">جارٍ الاتصال…</div>
+        <div id="term" aria-label="طرفية Linux التفاعلية" tabindex="0"></div>
+      </div>
+      <footer class="terminal-footer">
+        <span>⚡ <strong>REAL BASH</strong> · Railway Container</span>
+        <span>↑↓ History · Tab · Ctrl+C · Ctrl+L</span>
+      </footer>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js" defer></script>
+  <script src="/app.js" defer></script>
 </body>
 </html>
