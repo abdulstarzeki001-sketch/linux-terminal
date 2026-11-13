@@ -280,7 +280,7 @@ test('clipboard paste requires a deliberate click and sends only connected input
 
 
 test('Fn row exposes F1-F12 and Insert without sending a command when toggled',()=>{
-  const h=harness();
+  const h=harness({mobile:true});
   const socket=h.connect();
   socket.open();
   socket.message({type:'ready'});
