@@ -59,6 +59,24 @@ Cloudflare prints a temporary `https://…trycloudflare.com` address.
 > exposure, add a **Cloudflare Access** policy (email / SSO) in front of the
 > hostname so the shell is never reachable by password alone.
 
+## Deploy to Railway (works from an iPad)
+
+Railway builds the `Dockerfile` straight from GitHub and keeps the service
+always on — the whole setup happens in the browser, no CLI needed.
+
+1. Go to <https://railway.com>, sign in with GitHub.
+2. **New Project → Deploy from GitHub repo** → pick this repository.
+3. In the service **Variables** tab add:
+   - `TERMINAL_PASSWORD` — a strong password, 12+ characters
+   - `PORT` — `8080`
+4. In **Settings → Networking → Generate Domain**, choose port `8080`.
+5. Open the generated `https://….up.railway.app` URL, enter the password,
+   and you have a Linux terminal in the browser.
+
+Notes: Railway's Hobby plan is $5/month (includes $5 of usage). The
+container filesystem is ephemeral — anything installed with `apt` or saved
+in `$HOME` disappears on redeploy. WebSockets work out of the box.
+
 ## Deploy to Fly.io (later)
 
 Fly.io runs the same Docker image. You will need to set `TERMINAL_PASSWORD` as a Fly secret (`fly secrets set TERMINAL_PASSWORD=...`), not in the repo.
