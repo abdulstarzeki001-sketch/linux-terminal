@@ -270,7 +270,10 @@
     setConnection('connecting','جارٍ الاتصال');
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
     let socket;
-    try {socket = new WebSocket(protocol+'://'+location.host+'/ws');}
+    // When served behind the Wormstar AI Lab gateway, stay on that origin.
+    // The standalone Railway URL retains its original /ws route and password.
+    const wsPath = /^\/terminal\/(?:.*)?$/.test(location.pathname) ? '/terminal/ws' : '/ws';
+    try {socket = new WebSocket(protocol+'://'+location.host+wsPath);}
     catch (_) {
       secret = '';
       showLogin('تعذر إنشاء الاتصال الآمن');
