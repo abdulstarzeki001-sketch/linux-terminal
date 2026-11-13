@@ -96,6 +96,14 @@ a{text-decoration:none}
  text-align:left;direction:ltr;font-family:ui-monospace,monospace;font-size:16px;
  outline-offset:2px}
 #pw::placeholder{color:var(--muted)}
+.password-row{display:flex;align-items:stretch;gap:8px;min-width:0;direction:ltr}
+.password-row #pw{flex:1;min-width:0;width:0}
+#revealPassword{min-width:76px;padding:8px 12px;min-height:48px;border:1px solid var(--border);
+ background:var(--panel-alt);color:var(--neon);border-radius:11px;font-size:12px;
+ font-weight:800;touch-action:manipulation}
+#revealPassword:hover{border-color:var(--neon)}
+#passwordHint{line-height:1.7;color:var(--muted)}
+
 #go{min-height:46px;border:none;border-radius:11px;background:var(--neon);
  color:#121724;font-weight:850;transition:filter .18s}
 #go:hover{filter:brightness(1.10)}
