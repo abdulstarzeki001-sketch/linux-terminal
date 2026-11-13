@@ -1,0 +1,37 @@
+# Cloudflare Tunnel overlay.
+#
+# Runs the terminal WITHOUT publishing a host port, and puts cloudflared
+# in front of it. Cloudflare terminates HTTPS at the edge and tunnels the
+# WebSocket traffic to the container over the private compose network, so
+# port 8080 is never exposed on the host or the internet.
+#
+# Usage (named tunnel, stable URL + your own domain):
+#   1. Create a tunnel in the Cloudflare dashboard
+#      (Zero Trust -> Networks -> Tunnels -> Create a tunnel -> "Cloudflared").
+#   2. Add a Public Hostname route: your-host.example.com  ->  http://terminal:8080
+#   3. Copy the tunnel token into .env as TUNNEL_TOKEN=...
+#   4. Run:
+#        docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml up --build
+#
+# Usage (quick tunnel, no account, throwaway *.trycloudflare.com URL, for testing):
+#   Leave TUNNEL_TOKEN empty and run:
+#     docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml \
+#       run --rm cloudflared tunnel --no-autoupdate --url http://terminal:8080
+#   The printed https URL is your temporary public address.
+
+services:
+  terminal:
+    # Reachable only inside the compose network, not on the host.
+    ports: !reset []
+    expose:
+      - "8080"
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    # Named tunnel driven by TUNNEL_TOKEN (set it in .env).
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - terminal

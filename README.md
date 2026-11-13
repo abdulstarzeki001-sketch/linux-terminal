@@ -22,6 +22,61 @@ Inside the terminal you have a normal Debian environment: `apt` (via `sudo apt i
 - **Sudo:** `tuser` has passwordless sudo, so the shell can install packages. This means root inside the container. The container is the isolation boundary, so do not mount host folders or add privileged flags. To remove sudo, delete the `sudoers.d` line from the Dockerfile.
 - **HTTPS:** this app speaks plain HTTP. Do not expose it on the internet without HTTPS in front (Fly.io, Caddy, or Cloudflare Tunnel).
 
+## Put it online with Cloudflare Tunnel
+
+This app runs a real `bash` process per session, so it needs a persistent
+container — it **cannot** run on Cloudflare Pages or Workers (V8 isolates,
+no process spawning, no PTY). The right way to expose it through Cloudflare
+is a **Cloudflare Tunnel**: the container stays private, and `cloudflared`
+makes an outbound connection to Cloudflare's edge, which serves a public
+HTTPS URL (WebSockets included) with Cloudflare's protection in front.
+
+The `docker-compose.cloudflare.yml` overlay removes the host port and adds a
+`cloudflared` service on the private network.
+
+**Named tunnel (stable URL, your own domain):**
+
+1. In the Cloudflare dashboard: **Zero Trust → Networks → Tunnels → Create a
+   tunnel → Cloudflared**.
+2. Add a **Public Hostname** route: `terminal.example.com` → `http://terminal:8080`.
+3. Put the tunnel token in `.env`: `TUNNEL_TOKEN=...`
+4. Start it:
+
+   ```sh
+   docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml up --build
+   ```
+
+**Quick tunnel (no account, throwaway `*.trycloudflare.com` URL, for testing):**
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml \
+  run --rm cloudflared tunnel --no-autoupdate --url http://terminal:8080
+```
+
+Cloudflare prints a temporary `https://…trycloudflare.com` address.
+
+> **Harden it:** the terminal's password is the only gate. For public
+> exposure, add a **Cloudflare Access** policy (email / SSO) in front of the
+> hostname so the shell is never reachable by password alone.
+
+## Deploy to Railway (works from an iPad)
+
+Railway builds the `Dockerfile` straight from GitHub and keeps the service
+always on — the whole setup happens in the browser, no CLI needed.
+
+1. Go to <https://railway.com>, sign in with GitHub.
+2. **New Project → Deploy from GitHub repo** → pick this repository.
+3. In the service **Variables** tab add:
+   - `TERMINAL_PASSWORD` — a strong password, 12+ characters
+   - `PORT` — `8080`
+4. In **Settings → Networking → Generate Domain**, choose port `8080`.
+5. Open the generated `https://….up.railway.app` URL, enter the password,
+   and you have a Linux terminal in the browser.
+
+Notes: Railway's Hobby plan is $5/month (includes $5 of usage). The
+container filesystem is ephemeral — anything installed with `apt` or saved
+in `$HOME` disappears on redeploy. WebSockets work out of the box.
+
 ## Deploy to Fly.io (later)
 
 Fly.io runs the same Docker image. You will need to set `TERMINAL_PASSWORD` as a Fly secret (`fly secrets set TERMINAL_PASSWORD=...`), not in the repo.
@@ -34,3 +89,4 @@ Fly.io runs the same Docker image. You will need to set `TERMINAL_PASSWORD` as a
 | `web/` | xterm.js page and client script |
 | `Dockerfile` | Debian + Node 20 + dev tools, non-root `tuser` |
 | `docker-compose.yml` | Local run with resource limits, bound to 127.0.0.1 |
+| `docker-compose.cloudflare.yml` | Overlay that fronts the terminal with a Cloudflare Tunnel |
