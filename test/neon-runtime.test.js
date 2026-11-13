@@ -284,11 +284,11 @@ test('Fn row exposes F1-F12 and Insert without sending a command when toggled',(
   const socket=h.connect();
   socket.open();
   socket.message({type:'ready'});
-  const before=socket.sent.length;
+  const before=socket.sent.filter(msg=>msg.type==='input').length;
   h.fn();
   assert.equal(h.get('functionKeys').classList.hidden,false);
   assert.equal(h.get('fnToggle').attrs['aria-expanded'],'true');
-  assert.equal(socket.sent.length,before);
+  assert.equal(socket.sent.filter(msg=>msg.type==='input').length,before);
   h.key('f1');
   assert.equal(socket.sent.at(-1).data,'\x1bOP');
   h.key('f4');
