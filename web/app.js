@@ -6,8 +6,22 @@
   let term = null;
   let fit = null;
   let started = false;
+  let lastError = '';
+
+  window.addEventListener('resize', () => {
+    if (fit) {
+      try { fit.fit(); } catch (_) { /* disconnected */ }
+    }
+  });
 
   function showLogin(message) {
+    if (term) {
+      term.dispose();
+      term = null;
+      fit = null;
+    }
+    started = false;
+    $('pw').value = '';
     $('login').classList.remove('hidden');
     $('status').classList.add('hidden');
     $('term').style.display = 'none';
@@ -21,6 +35,12 @@
     $('term').style.display = 'block';
     $('status').classList.remove('hidden');
     $('status').textContent = 'connected';
+
+    if (typeof Terminal === 'undefined' || typeof FitAddon === 'undefined') {
+      lastError = 'تعذر تحميل مكتبة الطرفية. تحقق من الاتصال بالإنترنت.';
+      if (ws) ws.close();
+      return;
+    }
 
     term = new Terminal({
       cursorBlink: true,
@@ -37,7 +57,6 @@
 
     term.onData((data) => send({ type: 'input', data }));
     term.onResize(({ cols, rows }) => send({ type: 'resize', cols, rows }));
-    window.addEventListener('resize', () => fit.fit());
   }
 
   function send(payload) {
@@ -45,10 +64,21 @@
   }
 
   function connect(password) {
+    started = false;
+    lastError = '';
+    if (ws && ws.readyState !== WebSocket.CLOSED) ws.close();
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    try {
+      ws = new WebSocket(`${proto}://${location.host}/ws`);
+    } catch (_) {
+      showLogin('تعذر إنشاء الاتصال الآمن بالطرفية');
+      return;
+    }
 
-    ws.onopen = () => send({ type: 'auth', password });
+    ws.onopen = () => {
+      send({ type: 'auth', password });
+      $('pw').value = '';
+    };
 
     ws.onmessage = (ev) => {
       let msg;
@@ -57,16 +87,16 @@
       if (msg.type === 'ready') return startTerminal();
       if (msg.type === 'output' && term) return term.write(msg.data);
       if (msg.type === 'info' && term) return term.write(msg.data);
-      if (msg.type === 'error') return showLogin(msg.message);
+      if (msg.type === 'error') {
+        lastError = msg.message;
+        ws.close();
+      }
     };
 
     ws.onclose = () => {
-      if (started && term) {
-        term.write('\r\n[تم قطع الاتصال]\r\n');
-        $('status').textContent = 'disconnected';
-      } else if (!started) {
-        showLogin($('err').textContent || 'تعذر الاتصال بالسيرفر');
-      }
+      showLogin(lastError || (started
+        ? 'انقطع الاتصال. يمكنك إعادة الدخول.'
+        : 'تعذر الاتصال بالسيرفر'));
     };
   }
 
