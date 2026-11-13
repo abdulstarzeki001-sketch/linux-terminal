@@ -59,6 +59,7 @@ function harness(){
     cancelAnimationFrame(){},
     innerWidth:1100,innerHeight:800,devicePixelRatio:1,
     addEventListener(){},
+    Terminal,
     FitAddon:{FitAddon},
     navigator:{},
   };
