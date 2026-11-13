@@ -84,11 +84,12 @@ test('Mobile terminal is top anchored when iPhone keyboard shortens viewport',()
 });
 
 test('Terminal assets and WebSocket keep Wormstar same-origin paths',()=>{
-  assert.match(html,/href="neon\\.css"/);
-  assert.match(html,/src="app\\.js" defer/);
-  assert.doesNotMatch(html,/href="\\/neon\\.css"|src="\\/app\\.js"/);
-  assert.match(js,/location\\.pathname/);
-  assert.match(js,/['"]\\/terminal\\/ws['"]/);
-  assert.match(js,/['"]\\/ws['"]/);
-  assert.doesNotMatch(js,/up\\.railway\\.app\\/ws/);
+  assert.ok(html.includes('href="neon.css"'));
+  assert.ok(html.includes('src="app.js" defer'));
+  assert.equal(html.includes('href="/neon.css"'),false);
+  assert.equal(html.includes('src="/app.js"'),false);
+  assert.ok(js.includes('location.pathname'));
+  assert.ok(js.includes("'/terminal/ws'"));
+  assert.ok(js.includes("'/ws'"));
+  assert.equal(js.includes('up.railway.app/ws'),false);
 });
