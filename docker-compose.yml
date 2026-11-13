@@ -6,6 +6,10 @@ services:
     ports:
       # Bound to localhost only. Put a reverse proxy with HTTPS in front of it before exposing it.
       - "127.0.0.1:8080:8080"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     mem_limit: 1g
     memswap_limit: 1g
     cpus: 1.0
