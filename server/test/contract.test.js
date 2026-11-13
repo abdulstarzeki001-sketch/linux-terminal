@@ -110,6 +110,7 @@ test('valid origin and password establish an interactive session', async () => {
     });
     client.on('close', () => {
       clearTimeout(deadline);
+      reject(new Error('WebSocket closed before terminal became ready'));
     });
   });
   assert.equal(await ready, true);
