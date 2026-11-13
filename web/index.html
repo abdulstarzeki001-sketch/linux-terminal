@@ -59,7 +59,11 @@
           <h2>الدخول إلى Linux Terminal</h2>
           <p class="login-caption">جلسة Bash حقيقية داخل حاوية Railway. أدخل كلمة المرور الخاصة بالطرفية؛ لن تُخزَّن في المتصفح.</p>
           <label for="pw" class="field-label">كلمة مرور Railway</label>
-          <input id="pw" type="password" placeholder="••••••••••••" autocomplete="current-password" required>
+          <div class="password-row">
+            <input id="pw" type="password" name="railway-terminal-password" placeholder="أدخل كلمة Railway هنا" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" dir="ltr" aria-describedby="passwordHint" required>
+            <button id="revealPassword" type="button" aria-controls="pw" aria-pressed="false" aria-label="إظهار كلمة مرور Railway">إظهار</button>
+          </div>
+          <p id="passwordHint" class="login-note" role="status" aria-live="polite">اكتب كلمة مرور Railway يدوياً. كلمة مرور AI Lab والملء التلقائي على الآيفون قد تكون مختلفة.</p>
           <button id="go" type="button">دخول</button>
           <div id="err" role="alert" aria-live="assertive"></div>
           <p class="login-note">الاتصال مشفّر عبر HTTPS / WSS. الأوامر تُنفّذ على خادم Linux وليس داخل المتصفح.</p>
