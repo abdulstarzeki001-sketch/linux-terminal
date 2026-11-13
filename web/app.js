@@ -9,6 +9,9 @@
   const login = $('login');
   const error = $('err');
   const password = $('pw');
+  const revealPassword = $('revealPassword');
+  const passwordHint = $('passwordHint');
+  const manualHint = 'اكتب كلمة مرور Railway يدوياً. كلمة مرور AI Lab والملء التلقائي على الآيفون قد تكون مختلفة.';
   const connectButton = $('go');
   const disconnectButton = $('disconnect');
   const screen = $('term');
@@ -193,6 +196,11 @@
     login.classList.remove('hidden');
     statusBar.classList.add('hidden');
     password.value = '';
+    password.type = 'password';
+    revealPassword.textContent = 'إظهار';
+    revealPassword.setAttribute('aria-pressed','false');
+    revealPassword.setAttribute('aria-label','إظهار كلمة مرور Railway');
+    passwordHint.textContent = manualHint;
     connectButton.disabled = false;
     connecting = false;
     error.textContent = message || '';
@@ -257,7 +265,12 @@
   function connect() {
     if (connecting || ws?.readyState === WebSocket.OPEN) return;
     let secret = password.value;
-    if (!secret) { error.textContent = 'أدخل كلمة المرور أولاً';return; }
+    if (!secret) { error.textContent = 'أدخل كلمة مرور Railway أولاً';return; }
+    // Never silently trim/normalize a password: whitespace may be intentional.
+    // This is only a warning about common iOS paste/autofill differences.
+    if (secret !== secret.trim() || /[\u200B-\u200D\uFEFF]/.test(secret)) {
+      passwordHint.textContent = 'تنبيه: الحقل يحتوي مسافة طرفية أو حرفاً غير مرئي. افحص النص قبل الدخول.';
+    }
     if (typeof window.Terminal !== 'function' || typeof window.FitAddon?.FitAddon !== 'function') {
       secret = '';
       error.textContent = 'مكتبة الطرفية لم تُحمّل، تحقق من الإنترنت وأعد المحاولة.';
@@ -310,8 +323,11 @@
         if (terminalReady && term) term.write(message.data);
         else if (buffer.join('').length < 16000) buffer.push(message.data);
       } else if (message.type==='error') {
-        authFailure = typeof message.message==='string'
+        const upstreamMessage = typeof message.message==='string'
           ? message.message.slice(0,250) : 'تعذّرت المصادقة';
+        authFailure = upstreamMessage === 'كلمة المرور غير صحيحة'
+          ? 'خادم Railway رفض الكلمة المُرسلة. امسح تعبئة الآيفون التلقائية واكتب كلمة Railway يدوياً، ثم استخدم زر إظهار للتأكد.'
+          : upstreamMessage;
         socket.close();
       }
     };
@@ -505,6 +521,17 @@
   });
   disconnectButton.addEventListener('click',disconnect);
   connectButton.addEventListener('click',connect);
+  revealPassword.addEventListener('click',()=>{
+    const visible = password.type === 'password';
+    password.type = visible ? 'text' : 'password';
+    revealPassword.textContent = visible ? 'إخفاء' : 'إظهار';
+    revealPassword.setAttribute('aria-pressed',String(visible));
+    revealPassword.setAttribute('aria-label',visible ? 'إخفاء كلمة مرور Railway' : 'إظهار كلمة مرور Railway');
+  });
+  password.addEventListener('input',()=>{
+    passwordHint.textContent = manualHint;
+    error.textContent = '';
+  });
   password.addEventListener('keydown',event=>{
     if(event.key==='Enter'){event.preventDefault();connect();}
   });
