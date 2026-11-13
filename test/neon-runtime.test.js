@@ -120,8 +120,8 @@ function harness(options={}){
       const button={id:'fnToggle',dataset:{},closest:()=>button};
       get('mobileKeys').events.click({target:button});
     },
-    connect:()=>{
-    get('pw').value='unit-test-only-password';
+    connect:(suppliedPassword='unit-test-only-password')=>{
+    get('pw').value=suppliedPassword;
     get('go').events.click();
     return socket;
   },lastTerminal:()=>terminal};
@@ -377,9 +377,7 @@ test('iPhone reveals Railway field only on user tap and hides it again on logout
 
 test('leading whitespace is flagged but not altered or stored in password transmission',()=>{
   const h=harness();
-  h.get('pw').value='  intentional-leading-space';
-  const socket=h.get('go').events.click(),ws=h.connect();
-  // The second connect is blocked while the first handshake is pending.
+  const ws=h.connect('  intentional-leading-space');
   assert.match(h.get('passwordHint').textContent,/مسافة طرفية/);
   ws.open();
   assert.equal(ws.sent[0].password,'  intentional-leading-space');
