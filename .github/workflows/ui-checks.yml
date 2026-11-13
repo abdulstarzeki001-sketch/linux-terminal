@@ -1,0 +1,32 @@
+name: Railway Terminal UI Checks
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'test/**'
+      - '.github/workflows/ui-checks.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'test/**'
+      - '.github/workflows/ui-checks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check browser JS syntax
+        run: node --check web/app.js
+      - name: Check return navigation and existing login
+        run: node --test test/navigation.test.js
