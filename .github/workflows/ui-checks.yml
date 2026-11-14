@@ -5,6 +5,7 @@ on:
     paths:
       - 'web/**'
       - 'server/**'
+      - 'Dockerfile'
       - 'ai-gateway/**'
       - 'test/**'
       - '.github/workflows/ui-checks.yml'
@@ -13,6 +14,7 @@ on:
     paths:
       - 'web/**'
       - 'server/**'
+      - 'Dockerfile'
       - 'ai-gateway/**'
       - 'test/**'
       - '.github/workflows/ui-checks.yml'
