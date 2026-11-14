@@ -90,3 +90,48 @@ Fly.io runs the same Docker image. You will need to set `TERMINAL_PASSWORD` as a
 | `Dockerfile` | Debian + Node 20 + dev tools, non-root `tuser` |
 | `docker-compose.yml` | Local run with resource limits, bound to 127.0.0.1 |
 | `docker-compose.cloudflare.yml` | Overlay that fronts the terminal with a Cloudflare Tunnel |
+
+## STAR AI Copilot (optional, off by default)
+
+The Neon Terminal can display a **separate, advisory AI chat** after the ordinary
+Railway terminal password has been accepted. It is not a virtual shell and does
+not get permission to execute, paste or modify Bash commands. The actual Linux
+PTY stays connected through the existing WebSocket.
+
+### Setup
+
+The optional backend uses OpenAI's **Responses API** through server-side
+`fetch`. No key is included in this repository or the HTML.
+
+Railway Dashboard → project `terminal` service → Variables:
+
+| Variable | Value |
+| --- | --- |
+| `AI_ENABLED` | `1` to opt in, `0` to keep disabled |
+| `AI_MODEL` | A Responses-API-compatible model available to your account |
+| `AI_API_KEY` | Provider API key; **enter in Railway, never in GitHub or chat** |
+
+Redeploy only when ready, then sign into the normal terminal password form and
+select **✦ STAR AI**. Chat messages are sent only on an explicit Send click.
+The **إرفاق آخر المخرجات** button prepares an editable draft from recent xterm
+output without uploading anything. Remove personal data/secrets before Send.
+
+The API is limited to a fixed provider endpoint, max 4,000 input characters,
+650 generated tokens per request, 25 AI requests per WebSocket session,
+2.5-second cooldown, and a 25-second timeout. Chat state is not written to disk,
+browser storage or shell history. It does not call tools or Bash.
+
+**Important credential-isolation warning:** the current Docker image explicitly
+grants the terminal user passwordless `sudo`. Consequently, anyone trusted to
+log into this terminal may be able to inspect process environment and recover
+an `AI_API_KEY` stored in this **same container**, despite the server's
+`shellEnv()` allowlist. The current integration is **not safe for high-value
+production API keys** until privileges are hardened or the AI provider key is
+moved to a separate isolated service. Keep `AI_ENABLED=0` until that risk is
+resolved. A dedicated AI gateway service with its own Railway variables is the
+recommended production architecture. Set a strict billing budget on the
+provider account regardless of architecture.
+
+Validation: `node --check server/ai.js`, `node --check server/index.js`,
+`node --check web/app.js`, and `node --test test/*.test.js`.
+The mocked AI tests make no paid model requests and cannot verify a real key.
