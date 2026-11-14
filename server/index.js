@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const express = require('express');
 const { WebSocketServer } = require('ws');
 const pty = require('node-pty');
+const {isConfigured,askAI,MAX_PROMPT} = require('./ai');
 
 const PORT = Number(process.env.PORT || 8080);
 const PASSWORD = process.env.TERMINAL_PASSWORD || '';
@@ -58,8 +59,14 @@ wss.on('connection', (ws) => {
   let term = null;
   let idleTimer = null;
   let maxTimer = null;
+  let aiPending = false;
+  let aiAbort = null;
+  let aiRequests = 0;
+  let lastAIAt = 0;
 
   const cleanup = () => {
+    aiAbort?.abort();
+    aiAbort = null;
     clearTimeout(idleTimer);
     clearTimeout(maxTimer);
     if (term) {
@@ -93,7 +100,7 @@ wss.on('connection', (ws) => {
     }, MAX_SESSION_MINUTES * 60 * 1000);
 
     resetIdle();
-    send(ws, { type: 'ready' });
+    send(ws, { type: 'ready', aiEnabled:isConfigured() });
   };
 
   ws.on('message', (raw) => {
@@ -118,6 +125,50 @@ wss.on('connection', (ws) => {
     }
 
     if (!term) return;
+
+    // AI access is available ONLY to the already-authenticated shell session.
+    // All AI requests are advisory: they never write anything to the PTY.
+    if (msg.type === 'ai_chat') {
+      if (!isConfigured()) {
+        send(ws,{type:'ai_error',message:'المساعد غير مهيأ. أضف متغيرات AI في Railway.'});
+        return;
+      }
+      if (typeof msg.prompt !== 'string' || !msg.prompt.trim() ||
+          msg.prompt.length > MAX_PROMPT) {
+        send(ws,{type:'ai_error',message:'اكتب سؤالاً لا يتجاوز 4000 حرف.'});
+        return;
+      }
+      if (aiPending) {
+        send(ws,{type:'ai_error',message:'يوجد طلب AI قيد التنفيذ حالياً.'});
+        return;
+      }
+      // Bounded token costs per authenticated session, with a short cooldown.
+      if (aiRequests >= 25 || Date.now() - lastAIAt < 2500) {
+        send(ws,{type:'ai_error',message:'بلغت حد الطلبات أو أرسلت بسرعة كبيرة. جرّب لاحقاً.'});
+        return;
+      }
+      aiRequests++;
+      lastAIAt=Date.now();
+      aiPending=true;
+      aiAbort=new AbortController();
+      resetIdle();
+      send(ws,{type:'ai_busy'});
+      askAI(msg.prompt,{signal:aiAbort.signal}).then(answer=>{
+        send(ws,{type:'ai_reply',text:answer});
+      }).catch(error=>{
+        const messages={
+          AI_NOT_CONFIGURED:'المساعد غير مهيأ.',
+          AI_AUTH_FAILED:'مفتاح AI غير صالح أو ليس لديه صلاحية لهذا النموذج.',
+          AI_RATE_LIMIT:'وصل مزود AI إلى حد الطلبات أو الرصيد.',
+          AI_TIMEOUT:'انتهت مهلة اتصال AI.',
+          AI_UPSTREAM_UNAVAILABLE:'خدمة AI غير متاحة أو النموذج غير صحيح.',
+          AI_EMPTY_RESPONSE:'لم يرجع النموذج نصاً.',
+          AI_INVALID_INPUT:'السؤال غير صالح.'
+        };
+        send(ws,{type:'ai_error',message:messages[error?.message]||'تعذر الاتصال بمزود AI.'});
+      }).finally(()=>{aiPending=false;aiAbort=null;});
+      return;
+    }
 
     if (msg.type === 'input' && typeof msg.data === 'string') {
       resetIdle();
