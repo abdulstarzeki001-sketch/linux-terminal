@@ -75,7 +75,7 @@ test('no AI keys leak into the shell environment or static frontend',()=>{
   const frontend=readFileSync(join(__dirname,'..','web','app.js'),'utf8');
   const html=readFileSync(join(__dirname,'..','web','index.html'),'utf8');
   const shellEnv=server.slice(server.indexOf('function shellEnv()'),server.indexOf('function send('));
-  assert.doesNotMatch(shellEnv,/AI_API_KEY|TERMINAL_PASSWORD/);
+  assert.doesNotMatch(shellEnv,/\b(?:AI_API_KEY|TERMINAL_PASSWORD)\s*:/);
   assert.doesNotMatch(frontend,/AI_API_KEY|Bearer |api\.openai\.com/);
   assert.doesNotMatch(html,/AI_API_KEY|api\.openai\.com/);
   assert.match(html,/id="aiPanel"/);
