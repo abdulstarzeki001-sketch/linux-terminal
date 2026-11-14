@@ -39,3 +39,5 @@ jobs:
           node --check ai-gateway/provider.js
       - name: Check return navigation and existing login
         run: node --test test/*.test.js
+      - name: Build isolated AI gateway Docker image
+        run: docker build -f ai-gateway/Dockerfile -t star-ai-gateway:ci .
