@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - 'web/**'
+      - 'server/**'
       - 'test/**'
       - '.github/workflows/ui-checks.yml'
   push:
     branches: [main]
     paths:
       - 'web/**'
+      - 'server/**'
       - 'test/**'
       - '.github/workflows/ui-checks.yml'
 
@@ -26,7 +28,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Check browser JS syntax
-        run: node --check web/app.js
+      - name: Check server and browser JS syntax
+        run: |
+          node --check web/app.js
+          node --check server/index.js
+          node --check server/ai.js
       - name: Check return navigation and existing login
         run: node --test test/*.test.js
