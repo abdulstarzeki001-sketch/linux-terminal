@@ -5,6 +5,7 @@ on:
     paths:
       - 'web/**'
       - 'server/**'
+      - 'ai-gateway/**'
       - 'test/**'
       - '.github/workflows/ui-checks.yml'
   push:
@@ -12,6 +13,7 @@ on:
     paths:
       - 'web/**'
       - 'server/**'
+      - 'ai-gateway/**'
       - 'test/**'
       - '.github/workflows/ui-checks.yml'
 
@@ -33,5 +35,7 @@ jobs:
           node --check web/app.js
           node --check server/index.js
           node --check server/ai.js
+          node --check ai-gateway/index.js
+          node --check ai-gateway/provider.js
       - name: Check return navigation and existing login
         run: node --test test/*.test.js
