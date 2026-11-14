@@ -21,6 +21,7 @@ ENV npm_config_nodedir=/usr/local
 RUN npm install --omit=dev
 
 COPY server/index.js ./
+COPY server/ai.js ./
 COPY web /app/web
 
 RUN chown -R tuser:tuser /app
