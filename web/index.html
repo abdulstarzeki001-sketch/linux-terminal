@@ -50,6 +50,7 @@
         <button type="button" id="clearOutput" class="tool" disabled>مسح الشاشة</button>
         <button type="button" id="pasteClipboard" class="tool" disabled>لصق</button>
         <button type="button" id="keysToggle" class="tool" aria-controls="mobileKeys" aria-expanded="false" disabled>⌨ مفاتيح إضافية</button>
+        <button type="button" id="aiToggle" class="tool ai-tool" aria-controls="aiPanel" aria-expanded="false" disabled>✦ STAR AI</button>
         <button type="button" id="disconnect" class="tool" disabled>قطع الاتصال</button>
       </div>
 
@@ -70,6 +71,20 @@
         </div>
         <div id="status" class="sr-only hidden" role="status" aria-live="polite">جارٍ الاتصال…</div>
         <div id="term" aria-label="طرفية Linux التفاعلية" tabindex="0"></div>
+        <aside id="aiPanel" class="ai-panel hidden" aria-label="مساعد STAR AI للطرفية" dir="rtl">
+          <div class="ai-panel-head">
+            <div><strong>✦ STAR AI Copilot</strong><small id="aiState">انتظار اتصال Linux</small></div>
+            <button type="button" id="aiClose" aria-label="إغلاق مساعد AI">×</button>
+          </div>
+          <p class="ai-privacy">المساعد يقترح ويشرح فقط، ولا ينفذ أوامر. لا ترسل كلمات مرور أو مفاتيح أو مخرجات حساسة.</p>
+          <div class="ai-messages" id="aiMessages" role="log" aria-live="polite" aria-label="المحادثة مع STAR AI"></div>
+          <div class="ai-compose">
+            <button type="button" id="aiExplain" class="ai-secondary" disabled>إرفاق آخر المخرجات للمراجعة</button>
+            <label for="aiPrompt" class="sr-only">سؤالك إلى STAR AI</label>
+            <textarea id="aiPrompt" rows="3" maxlength="4000" placeholder="اسأل عن أمر Linux أو خطأ ظهر عندك…" disabled></textarea>
+            <button type="button" id="aiSend" disabled>إرسال إلى AI</button>
+          </div>
+        </aside>
         <div id="mobileKeys" class="extra-keys hidden" dir="ltr" aria-label="مفاتيح Linux الإضافية" role="group">
           <div class="extra-keys-heading" dir="rtl"><span>⌨ مفاتيح الطرفية الاحترافية</span><span id="keyHint">الأزرار ترسل مفاتيح للخادم الحقيقي</span></div>
           <div class="key-row" role="group" aria-label="مفاتيح التنقل">
