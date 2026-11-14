@@ -4,12 +4,16 @@ on:
   pull_request:
     paths:
       - 'web/**'
+      - 'server/**'
+      - 'ai-gateway/**'
       - 'test/**'
       - '.github/workflows/ui-checks.yml'
   push:
     branches: [main]
     paths:
       - 'web/**'
+      - 'server/**'
+      - 'ai-gateway/**'
       - 'test/**'
       - '.github/workflows/ui-checks.yml'
 
@@ -26,7 +30,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Check browser JS syntax
-        run: node --check web/app.js
+      - name: Check server and browser JS syntax
+        run: |
+          node --check web/app.js
+          node --check server/index.js
+          node --check server/ai.js
+          node --check ai-gateway/index.js
+          node --check ai-gateway/provider.js
       - name: Check return navigation and existing login
         run: node --test test/*.test.js
+      - name: Build isolated AI gateway Docker image
+        run: docker build -f ai-gateway/Dockerfile -t star-ai-gateway:ci .

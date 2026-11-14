@@ -25,7 +25,9 @@ function harness(options={}){
         addEventListener(name,callback){this.events[name]=callback;},
         setAttribute(name,value){this.attrs[name]=value;},
         getContext(){return {clearRect(){},fillRect(){},fillText(){}};},
-        replaceChildren(){}
+        focus(){this.focused=true;},
+        appendChild(child){(this.children ||= []).push(child);},
+        replaceChildren(){this.children=[];}
       };
       nodes.set(id,node);
     }
@@ -91,6 +93,7 @@ function harness(options={}){
     body,hidden:false,
     documentElement:{style:{setProperty(name,value){viewportVars[name]=value;}}},
     getElementById:get,
+    createElement:tag=>({tagName:tag.toUpperCase(),className:'',textContent:''}),
     querySelector:()=>({setAttribute(){}}),
     querySelectorAll:selector=>selector==='[data-mod]'?modButtons:[],
     addEventListener(){}
@@ -391,4 +394,52 @@ test('backend connection errors remain distinct from an actual Railway password 
   ws.close();
   assert.match(h.get('err').textContent,/WebSocket/);
   assert.doesNotMatch(h.get('err').textContent,/خادم Railway رفض الكلمة/);
+});
+
+test('STAR AI panel requires terminal password and explicit user click, never executes shell input',()=>{
+  const h=harness({mobile:true});
+  assert.equal(h.get('aiToggle').disabled,true);
+  assert.equal(h.get('aiPanel').classList.hidden,true);
+  const socket=h.connect();
+  socket.open();
+  socket.message({type:'ready',aiEnabled:true});
+  assert.equal(h.get('aiToggle').disabled,false);
+  h.get('aiToggle').events.click();
+  assert.equal(h.get('aiPanel').classList.hidden,false);
+  assert.equal(h.get('aiSend').disabled,false);
+  h.get('aiPrompt').value='Explain whoami';
+  const before=socket.sent.length;
+  h.get('aiSend').events.click();
+  assert.deepEqual(socket.sent.at(-1),{type:'ai_chat',prompt:'Explain whoami'});
+  assert.equal(socket.sent.length,before+1);
+  assert.equal(socket.sent.filter(x=>x.type==='input').length,0);
+  assert.equal(h.get('aiSend').disabled,true);
+  socket.message({type:'ai_reply',text:'Only an answer <script>alert(1)</script>'});
+  assert.equal(h.get('aiMessages').children.at(-1).textContent,
+    'Only an answer <script>alert(1)</script>');
+  assert.equal(h.get('aiMessages').children.at(-1).className,'ai-message ai-bot');
+  assert.equal(h.get('aiSend').disabled,false);
+  h.get('disconnect').events.click();
+  assert.equal(h.get('aiPanel').classList.hidden,true);
+  assert.deepEqual(h.get('aiMessages').children,[]);
+  assert.equal(h.get('aiPrompt').value,'');
+});
+
+test('STAR AI disabled state is explicit and terminal output is only drafted, never auto-uploaded',()=>{
+  const h=harness({mobile:true});
+  const socket=h.connect();
+  socket.open();
+  socket.message({type:'ready',aiEnabled:false});
+  assert.equal(h.get('aiSend').disabled,true);
+  assert.equal(h.get('aiExplain').disabled,true);
+  assert.match(h.get('aiState').textContent,/غير مهيأ/);
+  socket.message({type:'ready',aiEnabled:true});
+  h.lastTerminal().buffer.active={
+    length:1,
+    getLine(){return {translateToString(){return 'non-sensitive test status';}};}
+  };
+  const inputBefore=socket.sent.filter(x=>x.type==='ai_chat').length;
+  h.get('aiExplain').events.click();
+  assert.match(h.get('aiPrompt').value,/non-sensitive test status/);
+  assert.equal(socket.sent.filter(x=>x.type==='ai_chat').length,inputBefore);
 });

@@ -90,3 +90,97 @@ Fly.io runs the same Docker image. You will need to set `TERMINAL_PASSWORD` as a
 | `Dockerfile` | Debian + Node 20 + dev tools, non-root `tuser` |
 | `docker-compose.yml` | Local run with resource limits, bound to 127.0.0.1 |
 | `docker-compose.cloudflare.yml` | Overlay that fronts the terminal with a Cloudflare Tunnel |
+
+## STAR AI Copilot for Railway Terminal — isolated service
+
+The terminal has a separate **STAR AI** drawer that explains commands and
+errors **after Railway password authentication**. It never executes commands
+and never automatically shares terminal output with a model. You can explicitly
+prepare a draft of the recent output, remove secrets, and click Send.
+
+### Production architecture
+
+```text
+Phone / Wormstar AI Lab (/terminal/) / Railway login
+                    |
+           Authenticated /ws
+                    |
+            Railway terminal
+             (Bash + xterm)
+                    |
+          private internal HTTP
+                    |
+      star-ai-gateway.railway.internal:8081
+          (AI key stored ONLY here)
+                    |
+             OpenAI Responses API
+```
+
+The terminal Dockerfile currently grants `tuser` passwordless sudo, so
+**never put the provider API key in the terminal service variables**. A
+terminal user might inspect local process environments. This design puts
+`AI_API_KEY` in a **different non-root Railway service and container**.
+The terminal only holds an internal gateway token; that token may still be
+recoverable by someone with sudo and could incur model costs, so the gateway
+limits requests (default 30/hour per service replica; max 60/hour) and should
+not have a public domain. Use provider billing limits as an additional guard.
+
+### Prepare the two Railway services
+
+1. Merge this PR only after reviewing tests. In the same Railway project
+   and environment, create a new GitHub-backed service named
+   `star-ai-gateway` from this repository. Set its **Dockerfile path**
+   to `ai-gateway/Dockerfile` and build context/root directory to repo
+   root `/`. Do **not** generate a public domain. Private DNS uses the
+   name `star-ai-gateway.railway.internal`.
+2. In **gateway service** Variables, add:
+   - `AI_ENABLED=1`
+   - `AI_MODEL=<a Responses-API-compatible model enabled on your account>`
+   - `AI_API_KEY=<provider key>` (only in this gateway; use a low-budget key)
+   - `AI_GATEWAY_TOKEN=<random string at least 32 characters>`
+   - `AI_MAX_PER_HOUR=30` (optional)
+   - `PORT=8081` (optional; default 8081)
+3. In the existing **terminal service**, add:
+   - `AI_ENABLED=1`
+   - `AI_GATEWAY_URL=http://star-ai-gateway.railway.internal:8081/answer`
+   - `AI_GATEWAY_TOKEN=<the exact same shared token>`
+   - **Never add `AI_API_KEY` here.**
+4. Deploy the gateway first and check the internal health endpoint
+   `http://star-ai-gateway.railway.internal:8081/health` from the private
+   network. Then deploy the updated terminal. Keep `TERMINAL_PASSWORD` and
+   its access control unchanged.
+5. Login to Railway Terminal as usual; click **✦ STAR AI**. If the
+   gateway is missing or misconfigured, the rest of the terminal continues
+   working and the AI drawer shows an explanation.
+
+### Behavior, privacy and limits
+
+- All AI chat is transported through the **already authenticated WebSocket**.
+  Cloudflare's `/terminal/ws` proxy continues to forward it transparently.
+- Only a deliberate Send click transmits a question. Preparing terminal output
+  only fills the editable question field; it never silently sends it.
+- AI replies render via `textContent`, not `innerHTML`, and have **no**
+  permission to write to the PTY, create files, or execute commands.
+- Per authenticated terminal session: 25 requests maximum, at least 2.5 seconds
+  between requests, one AI request in flight. Provider max 650 output tokens;
+  input capped at 4,000 characters and timeout around 25–28 seconds.
+- Gateway has a separate global hourly request cap; the configuration is
+  not intended for untrusted public terminals. No conversation is persisted
+  in browser storage or server files. Provider handling is governed by the
+  provider account's terms; `store:false` is sent with model requests.
+- Keep `AI_ENABLED=0` in the terminal until gateway credentials and
+  private networking are ready. Real provider calls incur API charges.
+
+### Tests
+
+```bash
+node --check server/index.js
+node --check server/ai.js
+node --check ai-gateway/index.js
+node --check ai-gateway/provider.js
+node --check web/app.js
+node --test test/*.test.js
+```
+
+All provider tests use mocked responses except the in-process HTTP gateway test,
+which runs against localhost only. They do not use a paid provider key.
