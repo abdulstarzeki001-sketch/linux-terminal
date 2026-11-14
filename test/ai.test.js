@@ -100,6 +100,43 @@ test('private gateway authenticates requests and enforces hourly API budget',asy
   assert.equal(providerCalls,2);
 });
 
+test('terminal distinguishes provider auth errors from unconfigured gateway at HTTP 503',async()=>{
+  for(const [code,expected] of [
+    ['AI_AUTH_FAILED','AI_AUTH_FAILED'],
+    ['AI_NOT_CONFIGURED','AI_NOT_CONFIGURED'],
+    ['AI_UPSTREAM_UNAVAILABLE','AI_UPSTREAM_UNAVAILABLE']
+  ]){
+    await assert.rejects(client.askAI('Explain ls',{
+      env:terminalEnv,
+      fetchFn:async()=>({ok:false,status:503,json:async()=>({error:code})})
+    }),new RegExp(expected));
+  }
+  await assert.rejects(client.askAI('Explain ls',{
+    env:terminalEnv,
+    fetchFn:async()=>({ok:false,status:503,json:async()=>{throw Error('HTML fallback')}})
+  }),/AI_NOT_CONFIGURED/);
+  await assert.rejects(client.askAI('Explain ls',{
+    env:terminalEnv,
+    fetchFn:async()=>({ok:false,status:502,json:async()=>({error:'SECRET_LEAK_UNTRUSTED'})})
+  }),/AI_UPSTREAM_UNAVAILABLE/);
+});
+
+test('gateway returns provider auth code without exposing credentials',async(t)=>{
+  const env={...aiEnv,AI_ENABLED:'1',AI_GATEWAY_TOKEN:gatewayToken};
+  const service=createGateway({env,fetchFn:async()=>({ok:false,status:401})});
+  await new Promise(resolve=>service.listen(0,'127.0.0.1',resolve));
+  t.after(()=>new Promise(resolve=>service.close(resolve)));
+  const res=await fetch('http://127.0.0.1:'+service.address().port+'/answer',{
+    method:'POST',headers:{
+      'Content-Type':'application/json','x-star-ai-token':gatewayToken
+    },body:JSON.stringify({prompt:'Explain ls'})
+  });
+  assert.equal(res.status,503);
+  const body=await res.json();
+  assert.deepEqual(body,{error:'AI_AUTH_FAILED'});
+  assert.equal(JSON.stringify(body).includes(env.AI_API_KEY),false);
+});
+
 test('AI WebSocket is gated by existing password auth and never calls PTY.write',()=>{
   const server=readFileSync(join(__dirname,'..','server','index.js'),'utf8');
   const auth=server.indexOf("if (!authed) {");
