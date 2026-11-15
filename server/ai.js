@@ -36,6 +36,19 @@ async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}
       redirect:'error'
     });
     if(!res.ok){
+      // Preserve the private gateway's exact, allowlisted error code.
+      // A 503 can mean missing provider configuration OR rejected API credentials.
+      let gatewayCode='';
+      try{
+        const body=await res.json();
+        gatewayCode=typeof body?.error==='string'?body.error:'';
+      }catch(_){/* older gateway or non-JSON failure */}
+      const known=[
+        'AI_NOT_CONFIGURED','AI_AUTH_FAILED','AI_RATE_LIMIT','AI_TIMEOUT',
+        'AI_UPSTREAM_UNAVAILABLE','AI_EMPTY_RESPONSE','AI_INVALID_INPUT',
+        'AI_NETWORK_ERROR'
+      ];
+      if(known.includes(gatewayCode))throw new Error(gatewayCode);
       if(res.status===401||res.status===403)throw new Error('AI_AUTH_FAILED');
       if(res.status===429)throw new Error('AI_RATE_LIMIT');
       if(res.status===503)throw new Error('AI_NOT_CONFIGURED');
