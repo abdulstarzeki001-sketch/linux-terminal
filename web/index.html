@@ -6,7 +6,8 @@
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" content="#1e1e2e">
   <title>⚡ Wormstar Neon Terminal — Railway Linux</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css">
+  <meta name="color-scheme" content="dark">
+  <!-- xterm CSS and JavaScript are loaded only when the user connects. -->
   <link rel="stylesheet" href="neon.css">
 </head>
 <body class="theme-catppuccin">
@@ -15,59 +16,84 @@
 
   <div class="app-frame">
     <header class="site-header">
-      <div class="brand">
-        <span class="brand-icon" aria-hidden="true">⚡</span>
-        <div class="brand-text">
-          <span class="site-label">WORMSTAR · NEON TERMINAL</span>
-          <span class="sub-label">Railway / Real Linux Bash / Secure WebSocket</span>
-        </div>
+      <a class="brand" href="https://wormstar-ai-lab.abdulstarzeki001.workers.dev/" rel="noreferrer" aria-label="Wormstar AI Lab home">
+        <span class="brand-icon" aria-hidden="true">⌘</span>
+        <span class="brand-text">
+          <span class="site-label">WORMSTAR <span class="brand-muted">/ TERMINAL</span></span>
+          <span class="sub-label">Secure developer workspace</span>
+        </span>
+      </a>
+      <div class="header-right">
+        <span id="connectionPill" class="connection-pill" data-state="locked" role="status" aria-live="polite">Secured</span>
+        <a class="back-to-wormstar" href="https://wormstar-ai-lab.abdulstarzeki001.workers.dev/"
+           rel="noreferrer" referrerpolicy="no-referrer" aria-label="Return to Wormstar AI Lab">
+          <span aria-hidden="true">←</span> Back to Lab
+        </a>
       </div>
-      <a class="back-to-wormstar"
-         href="https://wormstar-ai-lab.abdulstarzeki001.workers.dev/"
-         rel="noreferrer"
-         referrerpolicy="no-referrer"
-         aria-label="Return to Wormstar AI Lab"><span aria-hidden="true">↩</span> Back to Wormstar</a>
     </header>
 
     <main class="terminal-shell">
-      <!-- Connection state remains available to screen readers without a visual banner. -->
-      <span class="sr-only" id="connectionPill" data-state="locked" role="status" aria-live="polite">Secured</span>
 
-      <div class="toolbar" aria-label="Terminal toolbar">
-        <label class="theme-control" for="themeSelect">
-          <span>🎨 Theme</span>
-          <select id="themeSelect" aria-label="Choose terminal color theme">
-            <option value="catppuccin">Catppuccin</option>
-            <option value="neon">Neon</option>
-            <option value="dracula">Dracula</option>
-            <option value="tokyo">Tokyo Night</option>
-            <option value="gruvbox">Gruvbox</option>
-          </select>
-        </label>
-        <button type="button" id="matrixToggle" class="tool" aria-pressed="false">◈ Matrix</button>
-        <button type="button" id="soundToggle" class="tool" aria-pressed="false">♪ Sound</button>
-        <button type="button" id="copyOutput" class="tool" disabled>Copy Output</button>
-        <button type="button" id="clearOutput" class="tool" disabled>Clear Screen</button>
-        <button type="button" id="pasteClipboard" class="tool" disabled>Paste</button>
-        <button type="button" id="keysToggle" class="tool" aria-controls="mobileKeys" aria-expanded="false" disabled>⌨ Extra Keys</button>
-        <button type="button" id="aiToggle" class="tool ai-tool" aria-controls="aiPanel" aria-expanded="false" disabled>✦ STAR AI</button>
-        <button type="button" id="disconnect" class="tool" disabled>Disconnect</button>
+      <div class="toolbar" role="toolbar" aria-label="Terminal actions">
+        <div class="toolbar-main">
+          <span class="toolbar-label"><span class="live-indicator" aria-hidden="true"></span> CONSOLE ACTIONS</span>
+          <div class="toolbar-actions">
+            <button type="button" id="copyOutput" class="tool" title="Copy terminal output" disabled>⧉ <span>Copy</span></button>
+            <button type="button" id="pasteClipboard" class="tool" title="Paste one line" disabled>↳ <span>Paste</span></button>
+            <button type="button" id="keysToggle" class="tool" aria-controls="mobileKeys" aria-expanded="false" disabled>⌨ <span>Keys</span></button>
+            <button type="button" id="aiToggle" class="tool ai-tool" aria-controls="aiPanel" aria-expanded="false" disabled>✦ <span>STAR AI</span></button>
+            <button type="button" id="disconnect" class="tool tool-danger" disabled>⏻ <span>Disconnect</span></button>
+          </div>
+        </div>
+        <details class="settings-menu">
+          <summary aria-label="Open terminal preferences">⚙ <span>Settings</span></summary>
+          <div class="prefs-panel">
+            <div class="prefs-heading">APPEARANCE & DISPLAY</div>
+            <label class="theme-control" for="themeSelect">
+              <span>Color theme</span>
+              <select id="themeSelect" aria-label="Choose terminal color theme">
+                <option value="catppuccin">Catppuccin</option>
+                <option value="neon">Neon</option>
+                <option value="dracula">Dracula</option>
+                <option value="tokyo">Tokyo Night</option>
+                <option value="gruvbox">Gruvbox</option>
+              </select>
+            </label>
+            <div class="prefs-buttons">
+              <button type="button" id="matrixToggle" class="tool" aria-pressed="false">◈ Matrix OFF</button>
+              <button type="button" id="soundToggle" class="tool" aria-pressed="false">♪ Sound OFF</button>
+              <button type="button" id="clearOutput" class="tool" disabled>Clear output</button>
+            </div>
+          </div>
+        </details>
       </div>
 
       <div class="terminal-stage">
+        <section class="welcome-panel" aria-label="Terminal workspace introduction">
+          <span class="welcome-eyebrow"><span class="welcome-dot" aria-hidden="true"></span> WORMSTAR / REMOTE EXECUTION</span>
+          <h1>Your Linux.<br><em>One secure workspace.</em></h1>
+          <p>Work directly with a real Bash shell running in your private Railway container. A focused console, built for engineers.</p>
+          <div class="welcome-divider"></div>
+          <div class="feature-stack">
+            <div class="feature"><span class="feature-icon" aria-hidden="true">01</span><span><strong>Real Linux environment</strong><small>Interactive Bash · xterm.js</small></span></div>
+            <div class="feature"><span class="feature-icon" aria-hidden="true">02</span><span><strong>Encrypted connection</strong><small>HTTPS · WebSocket Secure</small></span></div>
+            <div class="feature"><span class="feature-icon" aria-hidden="true">03</span><span><strong>AI guidance, on demand</strong><small>STAR AI Copilot · Advisory mode</small></span></div>
+          </div>
+          <div class="welcome-foot"><span>WORMSTAR LAB</span><span>∞ BUILD / TEST / SHIP</span></div>
+        </section>
         <div id="login">
-          <div class="login-icon" aria-hidden="true">⌘</div>
-          <h2>Sign in to Linux Terminal</h2>
-          <p class="login-caption">A real Bash session in an isolated Railway container. Enter your terminal password; it will not be stored in your browser.</p>
+          <div class="login-topline"><span class="login-icon" aria-hidden="true">⌘</span><span class="access-badge"><span aria-hidden="true">●</span> PRIVATE ACCESS</span></div>
+          <h2>Connect to terminal</h2>
+          <p class="login-caption">Unlock your private Linux session with the Railway terminal password.</p>
           <label for="pw" class="field-label">Railway Password</label>
           <div class="password-row">
             <input id="pw" type="password" name="railway-terminal-password" placeholder="Enter Railway password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" dir="ltr" aria-describedby="passwordHint" required>
             <button id="revealPassword" type="button" aria-controls="pw" aria-pressed="false" aria-label="Show Railway password">Show</button>
           </div>
           <p id="passwordHint" class="login-note" role="status" aria-live="polite">Enter the Railway password manually. Your AI Lab password or iPhone AutoFill may be different.</p>
-          <button id="go" type="button">Connect</button>
+          <button id="go" type="button">Open secure terminal <span aria-hidden="true">→</span></button>
           <div id="err" role="alert" aria-live="assertive"></div>
-          <p class="login-note">Your connection is encrypted over HTTPS / WSS. Commands run on the remote Linux server, not in your browser.</p>
+          <p class="login-note login-security"><span aria-hidden="true">◇</span> Encrypted session. Nothing executes on your device.</p>
         </div>
         <div id="status" class="sr-only hidden" role="status" aria-live="polite">Connecting…</div>
         <div id="term" aria-label="Interactive Linux terminal" tabindex="0"></div>
@@ -170,8 +196,6 @@
     </main>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>

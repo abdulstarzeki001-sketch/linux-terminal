@@ -19,7 +19,7 @@
   const keysToggle = $('keysToggle');
   const keyHint = $('keyHint');
   const keyMods = {ctrl:false,alt:false,shift:false};
-  let keysExpanded = coarsePointer.matches;
+  let keysExpanded = false;
   let fnExpanded = false;
   let viewportBaseline = window.visualViewport?.height || 0;
   const statusBar = $('status');
@@ -59,7 +59,7 @@
   }
   const preferences = {
     theme: saved('theme','catppuccin'),
-    matrix: saved('matrix',coarsePointer.matches || reduced.matches ? '0':'1') === '1',
+    matrix: saved('matrix','0') === '1',
     sound: saved('sound','0') === '1'
   };
   if (!themeNames.has(preferences.theme)) preferences.theme = 'catppuccin';
@@ -139,6 +139,7 @@
     for (const oldTheme of themeNames) document.body.classList.remove('theme-' + oldTheme);
     document.body.classList.add('theme-' + theme);
     preferences.theme = theme;
+    if (rainRunning) matrixInk = getComputedStyle(document.body).getPropertyValue('--neon').trim() || '#89b4fa';
     themeSelect.value = theme;
     save('theme',theme);
     if (term) term.options.theme = terminalPalette();
@@ -157,6 +158,7 @@
     rainColumns = Array.from({length:columns}, () => Math.floor(Math.random()*15));
   }
   const matrixGlyphs = 'アイウエオカキクケコサシスセソタチツテト0123456789ABCDEF';
+  let matrixInk = '#89b4fa';
   function drawMatrix(now) {
     if (!rainRunning || !matrixContext) return;
     rainFrame = window.requestAnimationFrame(drawMatrix);
@@ -168,7 +170,7 @@
     const cell = width / Math.max(rainColumns.length,1);
     context.fillStyle = 'rgba(10,12,24,.22)';
     context.fillRect(0,0,width,height);
-    context.fillStyle = getComputedStyle(document.body).getPropertyValue('--neon').trim() || '#89b4fa';
+    context.fillStyle = matrixInk;
     context.font = Math.max(11,Math.floor(cell*.85))+'px monospace';
     for(let i=0;i<rainColumns.length;i++){
       const y = rainColumns[i] * cell;
@@ -181,6 +183,7 @@
     $('matrixToggle').setAttribute('aria-pressed',String(preferences.matrix));
     $('matrixToggle').textContent = preferences.matrix ? '◈ Matrix ON' : '◈ Matrix OFF';
     if (enabled && !rainRunning) {
+      matrixInk = getComputedStyle(document.body).getPropertyValue('--neon').trim() || '#89b4fa';
       canvasResize();
       rainRunning = true;
       rainFrame = window.requestAnimationFrame(drawMatrix);
@@ -214,6 +217,7 @@
     resetModifiers();
     document.body.classList.remove('keyboard-open');
     screen.style.display = 'none';
+    document.body.classList.remove('session-ready');
   }
   function showLogin(message) {
     cleanupTerminal();
@@ -243,6 +247,7 @@
     if (typeof window.Terminal !== 'function' || typeof window.FitAddon?.FitAddon !== 'function') {
       throw Error('Could not load xterm.js. Check your internet connection.');
     }
+    document.body.classList.add('session-ready');
     login.classList.add('hidden');
     screen.style.display = 'block';
     statusBar.classList.remove('hidden');
@@ -286,7 +291,35 @@
     notify('Connected to the live Linux server');
   }
 
-  function connect() {
+  let terminalLibrariesPromise = null;
+  function loadExternalScript(src) {
+    return new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.async=true;script.src=src;script.crossOrigin='anonymous';
+      let done=false;
+      const timer=setTimeout(()=>finish(new Error('Terminal library request timed out.')),15000);
+      function finish(err){if(done)return;done=true;clearTimeout(timer);script.onload=null;script.onerror=null;err?reject(err):resolve();}
+      script.onload=()=>finish();
+      script.onerror=()=>finish(new Error('Terminal library could not be loaded.'));
+      document.head.appendChild(script);
+    });
+  }
+  async function ensureTerminalLibraries(){
+    if(typeof window.Terminal==='function'&&typeof window.FitAddon?.FitAddon==='function')return;
+    if(!terminalLibrariesPromise){
+      terminalLibrariesPromise=(async()=>{
+        const stylesheet=document.createElement('link');
+        stylesheet.rel='stylesheet';
+        stylesheet.href='https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css';
+        document.head.appendChild(stylesheet);
+        await loadExternalScript('https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js');
+        await loadExternalScript('https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js');
+        if(typeof window.Terminal!=='function'||typeof window.FitAddon?.FitAddon!=='function')throw Error('Terminal libraries are not available.');
+      })().catch(error=>{terminalLibrariesPromise=null;throw error;});
+    }
+    return terminalLibrariesPromise;
+  }
+  async function connect() {
     if (connecting || ws?.readyState === WebSocket.OPEN) return;
     let secret = password.value;
     if (!secret) { error.textContent = 'Enter your Railway password first.';return; }
@@ -296,9 +329,15 @@
       passwordHint.textContent = 'Warning: The password contains leading/trailing whitespace or an invisible character. Check it before signing in.';
     }
     if (typeof window.Terminal !== 'function' || typeof window.FitAddon?.FitAddon !== 'function') {
-      secret = '';
-      error.textContent = 'Terminal library did not load. Check your connection and try again.';
-      return;
+      connecting = true;
+      connectButton.disabled = true;
+      setConnection('connecting','Loading console');
+      try { await ensureTerminalLibraries(); }
+      catch (_) {
+        secret = '';
+        showLogin('Could not load terminal libraries. Check your internet connection and retry.');
+        return;
+      }
     }
     authFailure = '';
     connecting = true;
