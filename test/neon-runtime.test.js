@@ -458,11 +458,11 @@ test('authenticated command form sends real shell input, without sending anythin
   h.get('commandForm').events.submit({preventDefault(){}});
   assert.equal(socket.sent.length,before+1);
   assert.equal(socket.sent.at(-1).type,'input');
-  assert.equal(socket.sent.at(-1).data,'pwd\\n');
-  h.get('commandLine').value='echo okay\\nrm -rf /';
+  assert.equal(socket.sent.at(-1).data,'pwd\n');
+  h.get('commandLine').value='echo okay\nrm -rf /';
   h.get('commandForm').events.submit({preventDefault(){}});
   assert.equal(socket.sent.length,before+1);
-  socket.message({type:'output',data:'test-shell-output\\r\\n'});
+  socket.message({type:'output',data:'test-shell-output\r\n'});
   assert.match(h.get('plainOutput').textContent,/test-shell-output/);
   h.get('disconnect').events.click();
   assert.equal(h.get('commandForm').classList.hidden,true);
