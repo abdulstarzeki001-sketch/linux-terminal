@@ -446,3 +446,25 @@ test('STAR AI disabled state is explicit and terminal output is only drafted, ne
   assert.match(h.get('aiPrompt').value,/non-sensitive test status/);
   assert.equal(socket.sent.filter(x=>x.type==='ai_chat').length,inputBefore);
 });
+
+test('authenticated command form sends real shell input, without sending anything before login',()=>{
+  const h=harness();
+  h.get('commandLine').value='pwd';
+  h.get('commandForm').events.submit({preventDefault(){}});
+  const socket=h.connect();
+  socket.open();socket.message({type:'ready'});
+  h.get('commandLine').value='pwd';
+  const before=socket.sent.length;
+  h.get('commandForm').events.submit({preventDefault(){}});
+  assert.equal(socket.sent.length,before+1);
+  assert.equal(socket.sent.at(-1).type,'input');
+  assert.equal(socket.sent.at(-1).data,'pwd\\n');
+  h.get('commandLine').value='echo okay\\nrm -rf /';
+  h.get('commandForm').events.submit({preventDefault(){}});
+  assert.equal(socket.sent.length,before+1);
+  socket.message({type:'output',data:'test-shell-output\\r\\n'});
+  assert.match(h.get('plainOutput').textContent,/test-shell-output/);
+  h.get('disconnect').events.click();
+  assert.equal(h.get('commandForm').classList.hidden,true);
+  assert.equal(h.get('plainOutput').textContent,'');
+});

@@ -15,6 +15,14 @@
   const connectButton = $('go');
   const disconnectButton = $('disconnect');
   const screen = $('term');
+  const plainConsole = $('plainConsole');
+  const plainOutput = $('plainOutput');
+  const commandForm = $('commandForm');
+  const commandLine = $('commandLine');
+  const commandHint = $('commandHint');
+  const runCommand = $('runCommand');
+  const textViewToggle = $('textViewToggle');
+  let forceTextView = false;
   const extraKeys = $('mobileKeys');
   const keysToggle = $('keysToggle');
   const keyHint = $('keyHint');
@@ -95,8 +103,12 @@
   }
   function setControls() {
     const on = terminalReady && ws && ws.readyState === WebSocket.OPEN;
-    $('copyOutput').disabled = !term;
-    $('clearOutput').disabled = !term;
+    $('copyOutput').disabled = !on;
+    $('clearOutput').disabled = !on;
+    runCommand.disabled = !on;
+    commandLine.disabled = !on;
+    textViewToggle.disabled = !on;
+    for(const button of commandForm.querySelectorAll?.('[data-command]') || []) button.disabled = !on;
     disconnectButton.disabled = !ws;
     connectButton.disabled = connecting;
     $('pasteClipboard').disabled = !on;
@@ -217,6 +229,11 @@
     resetModifiers();
     document.body.classList.remove('keyboard-open');
     screen.style.display = 'none';
+    plainConsole.classList.add('hidden');
+    commandForm.classList.add('hidden');
+    plainOutput.textContent = '';
+    commandLine.value = '';
+    forceTextView = false;
     document.body.classList.remove('session-ready');
   }
   function showLogin(message) {
@@ -242,53 +259,86 @@
       if (term) send({type:'resize', cols:term.cols, rows:term.rows});
     } catch (_) { /* browser resizing during keyboard transitions */ }
   }
+  // Mirror actual PTY messages to a plain-text console as an emergency rendering fallback.
+  // Only the user can submit commands. Nothing here calls eval or executes browser-side shell code.
+  function appendPlainOutput(data) {
+    const clean = String(data||'').replace(/\x1b\[[0-?]*[ -/]*[@-~]/g,'')
+      .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g,'').replace(/\r(?!\n)/g,'');
+    plainOutput.textContent = (plainOutput.textContent+clean).slice(-65000);
+    plainOutput.scrollTop = plainOutput.scrollHeight;
+  }
+  function updateConsoleMode() {
+    const showText = terminalReady && (forceTextView || !term);
+    if (showText) plainConsole.classList.remove('hidden');
+    else plainConsole.classList.add('hidden');
+    screen.style.display = terminalReady && !showText && term ? 'block' : 'none';
+    textViewToggle.textContent = showText ? '▣ Visual view' : '▤ Text view';
+    textViewToggle.setAttribute('aria-pressed',String(showText));
+    if(terminalReady && !showText && term) window.requestAnimationFrame(doFit);
+  }
   function startTerminal() {
     if (terminalReady) return;
-    if (typeof window.Terminal !== 'function' || typeof window.FitAddon?.FitAddon !== 'function') {
-      throw Error('Could not load xterm.js. Check your internet connection.');
-    }
+    const enhanced = typeof window.Terminal === 'function' &&
+      typeof window.FitAddon?.FitAddon === 'function';
     document.body.classList.add('session-ready');
     login.classList.add('hidden');
-    screen.style.display = 'block';
     statusBar.classList.remove('hidden');
-    term = new window.Terminal({
-      cursorBlink:!reduced.matches,
-      convertEol:false,
-      scrollback:5000,
-      fontFamily:'"Fira Code", "SFMono-Regular", Menlo, Consolas, monospace',
-      fontSize:coarsePointer.matches ? 12.5 : 14,
-      lineHeight:1.35,
-      cursorStyle:'bar',
-      theme:terminalPalette(),
-      allowTransparency:false
-    });
-    fit = new window.FitAddon.FitAddon();
-    term.loadAddon(fit);
-    term.open(screen);
-    term.onData(data => {
-      // Apply the on-screen Ctrl / Alt / Shift modifier to the next letter
-      // typed on the native iPhone keyboard, not only to virtual letter keys.
-      if ((keyMods.ctrl || keyMods.alt || keyMods.shift) &&
-          data.length===1 && /^[a-zA-Z]$/.test(data)) {
-        const sequence=sequenceForKey('letter-'+data.toLowerCase());
-        if(sequence!==null)send({type:'input',data:sequence});
-      } else if (keyMods.alt && data.length===1) {
-        send({type:'input',data:'\x1b'+data});
-        resetModifiers();
-      } else send({type:'input',data});
-    });
-    term.onResize(({cols,rows}) => send({type:'resize',cols,rows}));
+    commandForm.classList.remove('hidden');
+    plainOutput.textContent = '[Connected to Railway Linux. Real shell output follows.]\n';
+    if(enhanced){
+      screen.style.display = 'block';
+      term = new window.Terminal({
+        cursorBlink:!reduced.matches,
+        convertEol:false,
+        scrollback:5000,
+        fontFamily:'"Fira Code", "SFMono-Regular", Menlo, Consolas, monospace',
+        fontSize:coarsePointer.matches ? 12.5 : 14,
+        lineHeight:1.35,
+        cursorStyle:'bar',
+        theme:terminalPalette(),
+        allowTransparency:false
+      });
+      fit = new window.FitAddon.FitAddon();
+      term.loadAddon(fit);
+      term.open(screen);
+      term.onData(data => {
+        if ((keyMods.ctrl || keyMods.alt || keyMods.shift) &&
+            data.length===1 && /^[a-zA-Z]$/.test(data)) {
+          const sequence=sequenceForKey('letter-'+data.toLowerCase());
+          if(sequence!==null)send({type:'input',data:sequence});
+        } else if (keyMods.alt && data.length===1) {
+          send({type:'input',data:'\x1b'+data});
+          resetModifiers();
+        } else send({type:'input',data});
+      });
+      term.onResize(({cols,rows}) => send({type:'resize',cols,rows}));
+    }
     terminalReady = true;
     connecting = false;
     setConnection('connected','Connected');
     setControls();
-    window.requestAnimationFrame(() => {syncVisualViewport();doFit();term?.focus();});
-    if ('ResizeObserver' in window) {
+    updateConsoleMode();
+    window.requestAnimationFrame(() => {
+      syncVisualViewport();
+      doFit();
+      if(term)term.focus();
+      else commandLine.focus();
+      // Detect a collapsed terminal surface rather than showing an empty console.
+      if(term && screen.getBoundingClientRect) {
+        const rect = screen.getBoundingClientRect();
+        if(rect.width<130 || rect.height<80) {
+          forceTextView=true;
+          updateConsoleMode();
+          commandHint.textContent='Visual terminal could not fit. Switched to text mode.';
+        }
+      }
+    });
+    if ('ResizeObserver' in window && term) {
       resizeObserver = new ResizeObserver(() => window.requestAnimationFrame(doFit));
       resizeObserver.observe(screen);
     }
     beep();
-    notify('Connected to the live Linux server');
+    notify(term ? 'Connected to the live Linux server' : 'Connected in lightweight text console mode');
   }
 
   let terminalLibrariesPromise = null;
@@ -343,9 +393,9 @@
       setConnection('connecting','Loading console');
       try { await ensureTerminalLibraries(); }
       catch (_) {
-        secret = '';
-        showLogin('Could not load terminal libraries. Check your internet connection and retry.');
-        return;
+        // The browser may block the external xterm CDN. Continue over the real
+        // authenticated WebSocket using the built-in text console instead.
+        commandHint.textContent = 'Visual terminal unavailable. Text console will be used.';
       }
     }
     authFailure = '';
@@ -386,15 +436,20 @@
         aiEnabled=message.aiEnabled===true;
         try {
           startTerminal();
-          for (const line of buffer) term?.write(line);
+          for (const line of buffer) {
+            appendPlainOutput(line);
+            if(term)term.write(line);
+          }
         } catch (e) {
           authFailure = e.message;
           socket.close();
         }
       } else if ((message.type==='output' || message.type==='info') &&
         typeof message.data==='string') {
-        if (terminalReady && term) term.write(message.data);
-        else if (buffer.join('').length < 16000) buffer.push(message.data);
+        if (terminalReady) {
+          appendPlainOutput(message.data);
+          if(term)term.write(message.data);
+        } else if (buffer.join('').length < 16000) buffer.push(message.data);
       } else if (message.type==='ai_busy') {
         aiBusy=true;
         setControls();
@@ -572,16 +627,52 @@
     updateSound();beep();
   });
   $('clearOutput').addEventListener('click',()=>{
-    if(!term)return;
-    term.clear();term.focus();notify('Only the local terminal display was cleared.');
+    if(!terminalReady)return;
+    if(term)term.clear();
+    plainOutput.textContent='';
+    if(term && !forceTextView)term.focus();else commandLine.focus();
+    notify('Only the local terminal display was cleared.');
     beep();
   });
   $('copyOutput').addEventListener('click',async()=>{
-    if (!term) return;
+    if(!terminalReady)return;
     try {
-      await navigator.clipboard.writeText(extractOutput());
+      await navigator.clipboard.writeText(forceTextView || !term ? plainOutput.textContent : extractOutput());
       notify('Output copied.');
     } catch (_) {notify('Copying output is unavailable in this browser.');}
+  });
+
+  const quickCommands=new Set(['pwd','ls -la','whoami','uname -a','df -h','free -h']);
+  function executeShellCommand(value) {
+    if(!terminalReady || !ws || ws.readyState!==WebSocket.OPEN)return;
+    const command=String(value||'');
+    // Keep one command per explicit user action; never accept multiline paste.
+    if(!command.trim() || command.length>2000 || /[\r\n\0]/.test(command)){
+      commandHint.textContent='Enter a single Linux command (up to 2,000 characters).';
+      return;
+    }
+    if(!term || forceTextView) appendPlainOutput('$ '+command+'\n');
+    send({type:'input',data:command+'\n'});
+    commandLine.value='';
+    commandHint.textContent='Command sent to the authenticated Linux shell.';
+    if(term&&!forceTextView)term.focus();else commandLine.focus();
+  }
+  commandForm.addEventListener('submit',event=>{
+    event.preventDefault();
+    executeShellCommand(commandLine.value);
+  });
+  commandForm.addEventListener('click',event=>{
+    const button=event.target.closest?.('button[data-command]');
+    const value=button?.dataset?.command;
+    if(value && quickCommands.has(value))executeShellCommand(value);
+  });
+  textViewToggle.addEventListener('click',()=>{
+    if(!terminalReady)return;
+    if(!term){commandHint.textContent='Lightweight text console is active.';return;}
+    forceTextView=!forceTextView;
+    updateConsoleMode();
+    if(forceTextView)commandLine.focus();
+    else term.focus();
   });
 
   // The extra-key tray is not shown and cannot send commands before auth.

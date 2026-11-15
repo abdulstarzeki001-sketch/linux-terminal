@@ -107,3 +107,20 @@ test('redesigned terminal has compact controls and defers xterm assets until con
   assert.match(css,/body\.session-ready \.terminal-stage/);
   assert.match(css,/\.extra-keys\{max-height:185px/);
 });
+
+test('authenticated command bar shows real commands with a text console fallback',()=>{
+  assert.match(html,/id="commandForm" class="command-form hidden"/);
+  assert.match(html,/id="commandLine" type="text"/);
+  assert.match(html,/id="runCommand" disabled/);
+  for(const cmd of ['pwd','ls -la','whoami','uname -a','df -h','free -h'])
+    assert.ok(html.includes('data-command="'+cmd+'"'),cmd);
+  assert.match(html,/id="plainConsole" class="plain-console hidden"/);
+  assert.match(html,/id="plainOutput"/);
+  assert.match(html,/id="textViewToggle"/);
+  assert.match(css,/body\.session-ready #term\{/);
+  assert.match(js,/function executeShellCommand\(value\)/);
+  assert.match(js,/appendPlainOutput\(message\.data\)/);
+  assert.match(js,/type:'input',data:command\+'\\n'/);
+  assert.match(js,/Visual terminal unavailable\. Text console will be used/);
+  assert.doesNotMatch(js,/innerHTML\s*=/);
+});

@@ -400,3 +400,54 @@ body.session-ready #term{height:100%;padding:12px 16px}
  .login-security{margin:2px 0 0;padding-top:5px}
 }
 @media(prefers-reduced-motion:reduce){#matrix{display:none}}
+
+
+/* Actual shell commands and progressive text output: usable even when xterm CDN fails. */
+body.session-ready .terminal-stage{
+ display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;
+ grid-template-columns:none;gap:0;min-height:0;min-width:0;overflow:hidden
+}
+body.session-ready #term{
+ flex:1 1 0;min-height:135px;width:100%;height:auto!important;overflow:hidden;
+ position:relative
+}
+body.session-ready #term .xterm{height:100%;width:100%}
+.plain-console{flex:1 1 0;min-height:135px;min-width:0;display:flex;flex-direction:column;background:#090f1a;overflow:hidden}
+.plain-console-label{flex:none;display:flex;gap:9px;align-items:center;padding:9px 16px;color:var(--neon);border-bottom:1px solid var(--stroke);font:750 11px ui-monospace,monospace;letter-spacing:.08em}
+.plain-console-label small{font:500 10px system-ui,sans-serif;color:var(--muted);margin-left:auto;letter-spacing:normal}
+#plainOutput{flex:1;min-height:0;overflow:auto;margin:0;padding:16px;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:4;
+ color:#b8ecd6;font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,Menlo,monospace}
+.command-form{flex:none;display:flex;flex-direction:column;padding:8px clamp(11px,2.5vw,28px) max(12px,env(safe-area-inset-bottom));background:#101b2b;border-top:1px solid var(--stroke);gap:8px}
+.command-suggestions{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:thin;min-height:33px;white-space:nowrap}
+.commands-caption{flex:none;font:700 10px ui-monospace,monospace;color:var(--muted2);letter-spacing:.08em;margin-right:10px}
+.quick-cmd{flex:none;border:1px solid rgba(137,180,250,.19);border-radius:8px;color:var(--neon);background:rgba(137,180,250,.055);
+ padding:6px 12px;font:650 12px ui-monospace,SFMono-Regular,monospace;cursor:pointer;min-height:32px}
+.quick-cmd:hover:not(:disabled){background:rgba(137,180,250,.14);border-color:var(--neon)}
+.quick-cmd:disabled{opacity:.45;cursor:not-allowed}
+.command-entry{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 0 0 14px;background:#0a1220;border:1px solid #37516f;border-radius:10px;overflow:hidden}
+.command-entry:focus-within{border-color:var(--neon);box-shadow:0 0 0 2px rgba(137,180,250,.08)}
+.command-prompt{font:800 17px ui-monospace,monospace;color:var(--neon);user-select:none}
+#commandLine{flex:1;min-width:0;min-height:42px;background:transparent;border:0;color:var(--text);font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;outline:none}
+#commandLine:focus{outline:none}
+#commandLine::placeholder{color:#8b9eba}
+#runCommand{flex:none;align-self:stretch;min-width:78px;border:0;background:var(--neon);color:#081828;font:800 12px system-ui,sans-serif;cursor:pointer;padding:0 15px}
+#runCommand:disabled{opacity:.45;cursor:not-allowed}
+.command-hint{font-size:10px;color:var(--muted2);line-height:1.35}
+body.keyboard-open .command-suggestions,body.keyboard-open .command-hint{display:none}
+@media(max-width:650px){
+ .plain-console-label small{display:none}
+ .command-form{padding:6px 8px max(7px,env(safe-area-inset-bottom))}
+ .commands-caption{display:none}
+ .quick-cmd{font-size:11px;padding:5px 10px}
+ .command-suggestions{min-height:30px}
+ .command-hint{font-size:9px}
+ #runCommand{min-width:56px;padding:0 10px}
+ .toolbar-actions .tool span{display:none}
+ .toolbar-actions{gap:5px}
+ body.session-ready #term{min-height:95px}
+}
+@media(max-height:530px){
+ .command-hint{display:none}
+ .command-suggestions{min-height:27px}
+ .command-form{gap:4px}
+}

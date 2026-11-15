@@ -42,6 +42,7 @@
             <button type="button" id="pasteClipboard" class="tool" title="Paste one line" disabled>↳ <span>Paste</span></button>
             <button type="button" id="keysToggle" class="tool" aria-controls="mobileKeys" aria-expanded="false" disabled>⌨ <span>Keys</span></button>
             <button type="button" id="aiToggle" class="tool ai-tool" aria-controls="aiPanel" aria-expanded="false" disabled>✦ <span>STAR AI</span></button>
+            <button type="button" id="textViewToggle" class="tool" aria-pressed="false" title="Switch between visual and text console" disabled>▤ <span>Text view</span></button>
             <button type="button" id="disconnect" class="tool tool-danger" disabled>⏻ <span>Disconnect</span></button>
           </div>
         </div>
@@ -97,6 +98,28 @@
         </div>
         <div id="status" class="sr-only hidden" role="status" aria-live="polite">Connecting…</div>
         <div id="term" aria-label="Interactive Linux terminal" tabindex="0"></div>
+        <section id="plainConsole" class="plain-console hidden" aria-label="Text terminal fallback">
+          <div class="plain-console-label"><span aria-hidden="true">⌘</span> LIVE LINUX OUTPUT <small>Text mode • no extra libraries required</small></div>
+          <pre id="plainOutput" role="log" aria-live="off" tabindex="0"></pre>
+        </section>
+        <form id="commandForm" class="command-form hidden" autocomplete="off">
+          <div class="command-suggestions" role="group" aria-label="Quick read-only Linux commands">
+            <span class="commands-caption">QUICK COMMANDS</span>
+            <button type="button" class="quick-cmd" data-command="pwd">pwd</button>
+            <button type="button" class="quick-cmd" data-command="ls -la">ls -la</button>
+            <button type="button" class="quick-cmd" data-command="whoami">whoami</button>
+            <button type="button" class="quick-cmd" data-command="uname -a">uname -a</button>
+            <button type="button" class="quick-cmd" data-command="df -h">df -h</button>
+            <button type="button" class="quick-cmd" data-command="free -h">free -h</button>
+          </div>
+          <div class="command-entry">
+            <span class="command-prompt" aria-hidden="true">$</span>
+            <label class="sr-only" for="commandLine">Linux shell command</label>
+            <input id="commandLine" type="text" maxlength="2000" autocapitalize="off" spellcheck="false" autocomplete="off" placeholder="Type a Linux command…" aria-describedby="commandHint" disabled>
+            <button type="submit" id="runCommand" disabled>Run <span aria-hidden="true">↵</span></button>
+          </div>
+          <span id="commandHint" class="command-hint" role="status" aria-live="polite">Read-only shortcuts run on your authenticated Railway Linux session. Custom commands execute remotely.</span>
+        </form>
         <aside id="aiPanel" class="ai-panel hidden" aria-label="STAR AI terminal assistant" dir="ltr">
           <div class="ai-panel-head">
             <div><strong>✦ STAR AI Copilot</strong><small id="aiState">Waiting for Linux connection</small></div>
