@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -26,17 +26,17 @@
          href="https://wormstar-ai-lab.abdulstarzeki001.workers.dev/"
          rel="noreferrer"
          referrerpolicy="no-referrer"
-         aria-label="العودة إلى Wormstar AI Lab"><span aria-hidden="true">↩</span> العودة إلى Wormstar</a>
+         aria-label="Return to Wormstar AI Lab"><span aria-hidden="true">↩</span> Back to Wormstar</a>
     </header>
 
     <main class="terminal-shell">
       <!-- Connection state remains available to screen readers without a visual banner. -->
-      <span class="sr-only" id="connectionPill" data-state="locked" role="status" aria-live="polite">محمي</span>
+      <span class="sr-only" id="connectionPill" data-state="locked" role="status" aria-live="polite">Secured</span>
 
-      <div class="toolbar" aria-label="أدوات واجهة الطرفية">
+      <div class="toolbar" aria-label="Terminal toolbar">
         <label class="theme-control" for="themeSelect">
-          <span>🎨 الثيم</span>
-          <select id="themeSelect" aria-label="اختر ألوان الطرفية">
+          <span>🎨 Theme</span>
+          <select id="themeSelect" aria-label="Choose terminal color theme">
             <option value="catppuccin">Catppuccin</option>
             <option value="neon">Neon</option>
             <option value="dracula">Dracula</option>
@@ -46,59 +46,59 @@
         </label>
         <button type="button" id="matrixToggle" class="tool" aria-pressed="false">◈ Matrix</button>
         <button type="button" id="soundToggle" class="tool" aria-pressed="false">♪ Sound</button>
-        <button type="button" id="copyOutput" class="tool" disabled>نسخ المخرجات</button>
-        <button type="button" id="clearOutput" class="tool" disabled>مسح الشاشة</button>
-        <button type="button" id="pasteClipboard" class="tool" disabled>لصق</button>
-        <button type="button" id="keysToggle" class="tool" aria-controls="mobileKeys" aria-expanded="false" disabled>⌨ مفاتيح إضافية</button>
+        <button type="button" id="copyOutput" class="tool" disabled>Copy Output</button>
+        <button type="button" id="clearOutput" class="tool" disabled>Clear Screen</button>
+        <button type="button" id="pasteClipboard" class="tool" disabled>Paste</button>
+        <button type="button" id="keysToggle" class="tool" aria-controls="mobileKeys" aria-expanded="false" disabled>⌨ Extra Keys</button>
         <button type="button" id="aiToggle" class="tool ai-tool" aria-controls="aiPanel" aria-expanded="false" disabled>✦ STAR AI</button>
-        <button type="button" id="disconnect" class="tool" disabled>قطع الاتصال</button>
+        <button type="button" id="disconnect" class="tool" disabled>Disconnect</button>
       </div>
 
       <div class="terminal-stage">
         <div id="login">
           <div class="login-icon" aria-hidden="true">⌘</div>
-          <h2>الدخول إلى Linux Terminal</h2>
-          <p class="login-caption">جلسة Bash حقيقية داخل حاوية Railway. أدخل كلمة المرور الخاصة بالطرفية؛ لن تُخزَّن في المتصفح.</p>
-          <label for="pw" class="field-label">كلمة مرور Railway</label>
+          <h2>Sign in to Linux Terminal</h2>
+          <p class="login-caption">A real Bash session in an isolated Railway container. Enter your terminal password; it will not be stored in your browser.</p>
+          <label for="pw" class="field-label">Railway Password</label>
           <div class="password-row">
-            <input id="pw" type="password" name="railway-terminal-password" placeholder="أدخل كلمة Railway هنا" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" dir="ltr" aria-describedby="passwordHint" required>
-            <button id="revealPassword" type="button" aria-controls="pw" aria-pressed="false" aria-label="إظهار كلمة مرور Railway">إظهار</button>
+            <input id="pw" type="password" name="railway-terminal-password" placeholder="Enter Railway password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" dir="ltr" aria-describedby="passwordHint" required>
+            <button id="revealPassword" type="button" aria-controls="pw" aria-pressed="false" aria-label="Show Railway password">Show</button>
           </div>
-          <p id="passwordHint" class="login-note" role="status" aria-live="polite">اكتب كلمة مرور Railway يدوياً. كلمة مرور AI Lab والملء التلقائي على الآيفون قد تكون مختلفة.</p>
-          <button id="go" type="button">دخول</button>
+          <p id="passwordHint" class="login-note" role="status" aria-live="polite">Enter the Railway password manually. Your AI Lab password or iPhone AutoFill may be different.</p>
+          <button id="go" type="button">Connect</button>
           <div id="err" role="alert" aria-live="assertive"></div>
-          <p class="login-note">الاتصال مشفّر عبر HTTPS / WSS. الأوامر تُنفّذ على خادم Linux وليس داخل المتصفح.</p>
+          <p class="login-note">Your connection is encrypted over HTTPS / WSS. Commands run on the remote Linux server, not in your browser.</p>
         </div>
-        <div id="status" class="sr-only hidden" role="status" aria-live="polite">جارٍ الاتصال…</div>
-        <div id="term" aria-label="طرفية Linux التفاعلية" tabindex="0"></div>
-        <aside id="aiPanel" class="ai-panel hidden" aria-label="مساعد STAR AI للطرفية" dir="rtl">
+        <div id="status" class="sr-only hidden" role="status" aria-live="polite">Connecting…</div>
+        <div id="term" aria-label="Interactive Linux terminal" tabindex="0"></div>
+        <aside id="aiPanel" class="ai-panel hidden" aria-label="STAR AI terminal assistant" dir="ltr">
           <div class="ai-panel-head">
-            <div><strong>✦ STAR AI Copilot</strong><small id="aiState">انتظار اتصال Linux</small></div>
-            <button type="button" id="aiClose" aria-label="إغلاق مساعد AI">×</button>
+            <div><strong>✦ STAR AI Copilot</strong><small id="aiState">Waiting for Linux connection</small></div>
+            <button type="button" id="aiClose" aria-label="Close AI assistant">×</button>
           </div>
-          <p class="ai-privacy">المساعد يقترح ويشرح فقط، ولا ينفذ أوامر. لا ترسل كلمات مرور أو مفاتيح أو مخرجات حساسة.</p>
-          <div class="ai-messages" id="aiMessages" role="log" aria-live="polite" aria-label="المحادثة مع STAR AI"></div>
+          <p class="ai-privacy">The assistant only suggests and explains; it never runs commands. Do not share passwords, API keys, or sensitive output.</p>
+          <div class="ai-messages" id="aiMessages" role="log" aria-live="polite" aria-label="STAR AI conversation"></div>
           <div class="ai-compose">
-            <button type="button" id="aiExplain" class="ai-secondary" disabled>إرفاق آخر المخرجات للمراجعة</button>
-            <label for="aiPrompt" class="sr-only">سؤالك إلى STAR AI</label>
-            <textarea id="aiPrompt" rows="3" maxlength="4000" placeholder="اسأل عن أمر Linux أو خطأ ظهر عندك…" disabled></textarea>
-            <button type="button" id="aiSend" disabled>إرسال إلى AI</button>
+            <button type="button" id="aiExplain" class="ai-secondary" disabled>Review Recent Output</button>
+            <label for="aiPrompt" class="sr-only">Your question for STAR AI</label>
+            <textarea id="aiPrompt" rows="3" maxlength="4000" placeholder="Ask about a Linux command or an error…" disabled></textarea>
+            <button type="button" id="aiSend" disabled>Send to AI</button>
           </div>
         </aside>
-        <div id="mobileKeys" class="extra-keys hidden" dir="ltr" aria-label="مفاتيح Linux الإضافية" role="group">
-          <div class="extra-keys-heading" dir="rtl"><span>⌨ مفاتيح الطرفية الاحترافية</span><span id="keyHint">الأزرار ترسل مفاتيح للخادم الحقيقي</span></div>
-          <div class="key-row" role="group" aria-label="مفاتيح التنقل">
+        <div id="mobileKeys" class="extra-keys hidden" dir="ltr" aria-label="Additional Linux keys" role="group">
+          <div class="extra-keys-heading" dir="ltr"><span>⌨ Advanced Terminal Keys</span><span id="keyHint">Keys are sent to the live server</span></div>
+          <div class="key-row" role="group" aria-label="Navigation keys">
             <button type="button" class="key-btn" data-key="esc">Esc</button>
             <button type="button" class="key-btn" data-key="tab">Tab</button>
-            <button type="button" class="key-btn" data-key="up" aria-label="سهم للأعلى">↑</button>
-            <button type="button" class="key-btn" data-key="down" aria-label="سهم للأسفل">↓</button>
-            <button type="button" class="key-btn" data-key="left" aria-label="سهم لليسار">←</button>
-            <button type="button" class="key-btn" data-key="right" aria-label="سهم لليمين">→</button>
+            <button type="button" class="key-btn" data-key="up" aria-label="Up arrow">↑</button>
+            <button type="button" class="key-btn" data-key="down" aria-label="Down arrow">↓</button>
+            <button type="button" class="key-btn" data-key="left" aria-label="Left arrow">←</button>
+            <button type="button" class="key-btn" data-key="right" aria-label="Right arrow">→</button>
             <button type="button" class="key-btn" data-key="enter">Enter ↵</button>
             <button type="button" class="key-btn" data-key="backspace">⌫</button>
             <button type="button" class="key-btn" data-key="delete">Del</button>
           </div>
-          <div class="key-row" role="group" aria-label="المفاتيح الخاصة والاختصارات">
+          <div class="key-row" role="group" aria-label="Special keys and shortcuts">
             <button type="button" class="key-btn key-mod" data-mod="ctrl" aria-pressed="false">Ctrl</button>
             <button type="button" class="key-btn key-mod" data-mod="alt" aria-pressed="false">Alt</button>
             <button type="button" class="key-btn key-mod" data-mod="shift" aria-pressed="false">Shift</button>
@@ -113,7 +113,7 @@
             <button type="button" class="key-btn key-quick" data-key="ctrl-l">^L</button>
             <button type="button" class="key-btn key-quick" data-key="ctrl-r">^R</button>
           </div>
-          <div class="key-row" role="group" aria-label="الرموز والأحرف التقنية">
+          <div class="key-row" role="group" aria-label="Symbols and technical characters">
             <button type="button" class="key-btn" data-key="letter-a">A</button>
             <button type="button" class="key-btn" data-key="letter-c">C</button>
             <button type="button" class="key-btn" data-key="letter-d">D</button>
@@ -133,9 +133,9 @@
             <button type="button" class="key-btn" data-key="doublequote">&quot;</button>
             <button type="button" class="key-btn" data-key="lt">&lt;</button>
             <button type="button" class="key-btn" data-key="gt">&gt;</button>
-            <button type="button" class="key-btn key-soft" id="showNativeKeyboard">⌨ لوحة الآيفون</button>
+            <button type="button" class="key-btn key-soft" id="showNativeKeyboard">⌨ iPhone Keyboard</button>
           </div>
-          <div class="key-row hidden" id="functionKeys" role="group" aria-label="أزرار الوظائف والرموز الإضافية">
+          <div class="key-row hidden" id="functionKeys" role="group" aria-label="Function keys and extra symbols">
             <button type="button" class="key-btn" data-key="f1">F1</button>
             <button type="button" class="key-btn" data-key="f2">F2</button>
             <button type="button" class="key-btn" data-key="f3">F3</button>
