@@ -443,7 +443,7 @@ test('STAR AI disabled state is explicit and terminal output is only drafted, ne
   socket.message({type:'ready',aiEnabled:false});
   assert.equal(h.get('aiSend').disabled,true);
   assert.equal(h.get('aiExplain').disabled,true);
-  assert.match(h.get('aiState').textContent,/Not configured/);
+  assert.match(h.get('aiState').textContent,/settings disabled or incomplete/);
   socket.message({type:'ready',aiEnabled:true});
   h.lastTerminal().buffer.active={
     length:1,
