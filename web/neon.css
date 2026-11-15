@@ -980,7 +980,7 @@ body.theme-neon #go:hover:not(:disabled){box-shadow:0 8px 32px rgba(0,240,255,.2
 body.theme-neon .login-security{border-top:1px solid rgba(0,240,255,.13);color:#9caccb}
 body.theme-neon .login-security span{color:#3dff8b}
 body.theme-neon.session-ready .terminal-stage{background:#0c1422}
-body.session-ready .console-windowbar{
+body.theme-neon.session-ready .console-windowbar{
   background:rgba(0,0,0,.30);
   min-height:41px;border-bottom:1px solid rgba(0,240,255,.16);
   display:flex;align-items:center;gap:12px;padding:10px 14px

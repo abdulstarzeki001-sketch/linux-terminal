@@ -497,7 +497,9 @@ test('native terminal renderer failure keeps the authenticated session and text 
 });
 
 test('ANSI fallback renders prompt colors and semantic apt results safely',()=>{
-  const h=harness();const ws=h.connect();
+  const h=harness();
+  h.get('themeSelect').events.change({target:{value:'kali'}});
+  const ws=h.connect();
   ws.open();ws.message({type:'ready'});
   ws.message({type:'output',data:'\x1b[1;38;2;73;174;230m┌──('});
   ws.message({type:'output',data:'\x1b[38;5;84mtuser\x1b[0m)──[/home/tuser]\r\n'});
@@ -529,6 +531,7 @@ test('ANSI sequences split across WebSocket frames retain original color',()=>{
 
 test('native xterm highlights apt logs with green, blue, amber, purple and red ANSI',()=>{
   const h=harness();
+  h.get('themeSelect').events.change({target:{value:'kali'}});
   const socket=h.connect();
   socket.open();socket.message({type:'ready'});
   socket.message({type:'output',data:'Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]\r\n'});
