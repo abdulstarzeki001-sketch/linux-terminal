@@ -409,20 +409,20 @@
   const sgrEnd='\x1b[39m';
   let inAlternateScreen=false;
   function classifyOutput(line){
-    const s=line.trimStart();
-    if(/^(?:E:|Err:|error\b|fatal\b|fail(?:ed|ure)?\b|Traceback\b|Exception\b|command not found\b)/i.test(s))
+    const row=line.trimStart();
+    if(/^(?:E:|Err:|error\b|fatal\b|fail(?:ed|ure)?\b|Traceback\b|Exception\b|command not found\b)/i.test(row))
       return outputColors.red;
-    if(/^(?:W:|warn(?:ing)?\b|notice\b|deprecated\b|caution\b)/i.test(s))
+    if(/^(?:W:|warn(?:ing)?\b|notice\b|deprecated\b|caution\b)/i.test(row))
       return outputColors.amber;
-    if(/^(?:Hit:\d+|Get:\d+|Fetched\b|success\b|passed\b|✔|✓|\[OK\])/i.test(s))
+    if(/^(?:Hit:\d+|Get:\d+|Fetched\b|success\b|passed\b|✔|✓|\[OK\])/i.test(row))
       return outputColors.green;
-    if(/^(?:Reading package lists|Building dependency tree|Reading state information|Calculating upgrade|Setting up |Unpacking |Preparing to unpack|Processing triggers|Downloading |Installing |Collecting |Requirement already satisfied)/i.test(s))
+    if(/^(?:Reading package lists|Building dependency tree|Reading state information|Calculating upgrade|Setting up |Unpacking |Preparing to unpack|Processing triggers|Downloading |Installing |Collecting |Requirement already satisfied)/i.test(row))
       return outputColors.violet;
-    if(/^(?:\d+ upgraded|Need to get |After this operation|The following packages|The following NEW packages|Get:\d+)/i.test(s))
+    if(/^(?:\d+ upgraded|Need to get |After this operation|The following packages|The following NEW packages|Get:\d+)/i.test(row))
       return outputColors.cyan;
-    if(/^(?:total \d+|drwx|lrwx|[-bcdpls][rwxstST-]{9}|NAME\s|USER\s|Filesystem\s|Mem:\s)/i.test(s))
+    if(/^(?:total \d+|drwx|lrwx|[-bcdpls][rwxstST-]{9}|NAME\s|USER\s|Filesystem\s|Mem:\s)/i.test(row))
       return outputColors.blue;
-    if(/^(?:\$ |# |[A-Z][A-Z0-9 _-]{3,}:|--+|==+)/.test(s))
+    if(/^(?:\$ |# |[A-Z][A-Z0-9 _-]{3,}:|--+|==+)/.test(row))
       return outputColors.amber;
     return outputColors.normal;
   }
