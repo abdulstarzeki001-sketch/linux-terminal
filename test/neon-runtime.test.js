@@ -33,6 +33,14 @@ function harness(options={}){
     }
     return nodes.get(id);
   };
+  // Simulate real DOM textContent concatenation for safe ANSI span rendering.
+  const output=get('plainOutput');
+  let outputBase='';
+  Object.defineProperty(output,'textContent',{
+    configurable:true,
+    get(){return outputBase+(this.children||[]).map(c=>c.textContent).join('');},
+    set(value){outputBase=String(value);this.children=[];}
+  });
   let socket,terminal;
   const viewportVars={};
   const viewportEvents={};
@@ -93,7 +101,7 @@ function harness(options={}){
     body,hidden:false,
     documentElement:{style:{setProperty(name,value){viewportVars[name]=value;}}},
     getElementById:get,
-    createElement:tag=>({tagName:tag.toUpperCase(),className:'',textContent:''}),
+    createElement:tag=>({tagName:tag.toUpperCase(),className:'',textContent:'',style:{}}),
     querySelector:()=>({setAttribute(){}}),
     querySelectorAll:selector=>selector==='[data-mod]'?modButtons:[],
     addEventListener(){}
@@ -486,4 +494,35 @@ test('native terminal renderer failure keeps the authenticated session and text 
   assert.equal(socket.sent.at(-1).data,'whoami\n');
   socket.message({type:'output',data:'tuser\r\n'});
   assert.match(h.get('plainOutput').textContent,/tuser/);
+});
+
+test('ANSI fallback renders prompt colors and semantic apt results safely',()=>{
+  const h=harness();const ws=h.connect();
+  ws.open();ws.message({type:'ready'});
+  ws.message({type:'output',data:'\x1b[1;38;2;73;174;230m┌──('});
+  ws.message({type:'output',data:'\x1b[38;5;84mtuser\x1b[0m)──[/home/tuser]\r\n'});
+  ws.message({type:'output',data:'Get:1 http://deb.debian.org/debian\r\n'});
+  ws.message({type:'output',data:'E: Failed to download package\r\n'});
+  ws.message({type:'output',data:'<script>alert(1)</script>\n'});
+  const el=h.get('plainOutput');
+  assert.match(el.textContent,/tuser/);
+  assert.match(el.textContent,/Failed to download/);
+  assert.match(el.textContent,/<script>alert\(1\)<\/script>/);
+  assert.doesNotMatch(el.textContent,/\x1b/);
+  assert.ok(el.children.some(n=>n.style.color==='#49AEE6'),'truecolor cyan');
+  assert.ok(el.children.some(n=>n.style.color==='#5FFF87'),'256-color green');
+  assert.ok(el.children.some(n=>n.style.color==='#5EBDAB'),'semantic apt success');
+  assert.ok(el.children.some(n=>n.style.color==='#FF748C'),'semantic apt error');
+  assert.equal(el.children.some(n=>n.tagName==='SCRIPT'),false);
+  h.get('clearOutput').events.click();
+  assert.equal(el.textContent,'');
+});
+test('ANSI sequences split across WebSocket frames retain original color',()=>{
+  const h=harness();const ws=h.connect();
+  ws.open();ws.message({type:'ready'});
+  ws.message({type:'output',data:'\x1b[38;2;73;'});
+  ws.message({type:'output',data:'174;230mblue\x1b[0m\n'});
+  assert.match(h.get('plainOutput').textContent,/blue/);
+  assert.doesNotMatch(h.get('plainOutput').textContent,/\x1b/);
+  assert.ok(h.get('plainOutput').children.some(n=>n.style.color==='#49AEE6'));
 });

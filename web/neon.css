@@ -796,3 +796,22 @@ body.theme-kali #toast{background:#15334d;border-color:#4398c3;color:#e9f4ff}
   body.theme-kali .quick-cmd,
   body.theme-kali #go{transition:none}
 }
+
+
+/* Kali Night: ANSI-colored shell output and contrasting command accents. */
+body.theme-kali #term{color:#CDE9F7}
+body.theme-kali #plainOutput{
+  color:#CDE9F7;font-family:"Cascadia Code","JetBrains Mono","Fira Code",ui-monospace,Consolas,monospace;
+  font-variant-ligatures:none;text-shadow:none;
+}
+body.theme-kali #plainOutput span{white-space:pre-wrap}
+body.theme-kali .quick-cmd[data-command="pwd"],
+body.theme-kali .quick-cmd[data-command="whoami"]{color:#8AF0D4;border-color:rgba(94,189,171,.36)}
+body.theme-kali .quick-cmd[data-command="ls -la"],
+body.theme-kali .quick-cmd[data-command="df -h"]{color:#8BCDFF;border-color:rgba(73,174,230,.43)}
+body.theme-kali .quick-cmd[data-command="uname -a"],
+body.theme-kali .quick-cmd[data-command="free -h"]{color:#FFC47D;border-color:rgba(254,164,76,.38)}
+body.theme-kali .command-prompt{color:#60E0C4;text-shadow:0 0 15px rgba(94,189,171,.24)}
+body.theme-kali #commandLine{color:#E6F4FF;caret-color:#49AEE6}
+body.theme-kali #runCommand{color:#FFFFFF}
+body.theme-kali .plain-console-label{background:linear-gradient(90deg,#1b344a,#172536);color:#72C8FF}

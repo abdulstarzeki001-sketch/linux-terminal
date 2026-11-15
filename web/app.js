@@ -135,7 +135,7 @@
     const c = getComputedStyle(document.body);
     const value = name => c.getPropertyValue(name).trim();
     if(preferences.theme==='kali') return {
-      background:'#252E35',foreground:'#E6E6E6',cursor:'#49AEE6',
+      background:'#252E35',foreground:'#CDE9F7',cursor:'#49AEE6',
       selectionBackground:'rgba(73,174,230,.26)',
       black:'#1F2229',red:'#D41919',green:'#5EBDAB',yellow:'#FEA44C',
       blue:'#367BF0',magenta:'#9755B3',cyan:'#49AEE6',white:'#E6E6E6',
@@ -241,6 +241,7 @@
     plainConsole.classList.add('hidden');
     commandForm.classList.add('hidden');
     plainOutput.textContent = '';
+    resetAnsiRenderer();
     commandLine.value = '';
     forceTextView = false;
     document.body.classList.remove('session-ready');
@@ -268,13 +269,126 @@
       if (term) send({type:'resize', cols:term.cols, rows:term.rows});
     } catch (_) { /* browser resizing during keyboard transitions */ }
   }
-  // Mirror actual PTY messages to a plain-text console as an emergency rendering fallback.
-  // Only the user can submit commands. Nothing here calls eval or executes browser-side shell code.
-  function appendPlainOutput(data) {
-    const clean = String(data||'').replace(/\x1b\[[0-?]*[ -/]*[@-~]/g,'')
-      .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g,'').replace(/\r(?!\n)/g,'');
-    plainOutput.textContent = (plainOutput.textContent+clean).slice(-65000);
-    plainOutput.scrollTop = plainOutput.scrollHeight;
+  // Mirror real ANSI colors in the text fallback. All PTY output is textContent,
+  // not HTML. Even hostile terminal output cannot create script elements.
+  const ansiColors=[
+    '#252E35','#D41919','#5EBDAB','#FEA44C',
+    '#367BF0','#9755B3','#49AEE6','#E6E6E6',
+    '#627C91','#EC0101','#47D4B9','#FF8A18',
+    '#277FFF','#B580D6','#05A1F7','#FFFFFF'
+  ];
+  const ansiCube=[0,95,135,175,215,255];
+  let ansiTail='',ansiForeground=null,ansiBackground=null,ansiBold=false;
+  let ansiAtLineStart=true,ansiSemantic=null,ansiChars=0;
+  function ansi256(index){
+    const n=Math.floor(Number(index));
+    if(!Number.isFinite(n)||n<0||n>255)return null;
+    if(n<16)return ansiColors[n];
+    const rgb=n>=232 ? [8+(n-232)*10,8+(n-232)*10,8+(n-232)*10] :
+      [ansiCube[Math.floor((n-16)/36)],ansiCube[Math.floor((n-16)%36/6)],ansiCube[(n-16)%6]];
+    return '#'+rgb.map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase();
+  }
+  function setAnsiStyle(sequence){
+    const codes=sequence===''?[0]:sequence.split(';').map(v=>v===''?0:Number(v));
+    for(let i=0;i<codes.length;i++){
+      const c=codes[i];
+      if(c===0){ansiForeground=null;ansiBackground=null;ansiBold=false;}
+      else if(c===1)ansiBold=true;
+      else if(c===22)ansiBold=false;
+      else if(c===39)ansiForeground=null;
+      else if(c===49)ansiBackground=null;
+      else if(c>=30&&c<=37)ansiForeground=ansiColors[c-30];
+      else if(c>=90&&c<=97)ansiForeground=ansiColors[8+c-90];
+      else if(c>=40&&c<=47)ansiBackground=ansiColors[c-40];
+      else if(c>=100&&c<=107)ansiBackground=ansiColors[8+c-100];
+      else if(c===38||c===48){
+        let color=null;
+        if(codes[i+1]===5&&Number.isFinite(codes[i+2])){
+          color=ansi256(codes[i+2]);i+=2;
+        } else if(codes[i+1]===2&&i+4<codes.length){
+          const rgb=codes.slice(i+2,i+5);
+          if(rgb.every(x=>Number.isInteger(x)&&x>=0&&x<=255)){
+            color='#'+rgb.map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase();
+          }
+          i+=4;
+        }
+        if(c===38)ansiForeground=color;
+        else ansiBackground=color;
+      }
+    }
+  }
+  function semanticTerminalColor(line){
+    if(/^(?:E:|Err:|error:|fatal:|failed[: ])/i.test(line))return '#FF748C';
+    if(/^(?:W:|warning:|notice:)/i.test(line))return '#FEA44C';
+    if(/^(?:Get:\d+|Hit:\d+|Fetched |✔|✓)/i.test(line))return '#5EBDAB';
+    if(/^(?:Setting up |Preparing to unpack |Unpacking |Reading package lists|Building dependency tree|Processing triggers)/i.test(line))return '#6ABBF2';
+    if(/^\$\s/.test(line))return '#94D7FF';
+    return null;
+  }
+  function writeAnsiText(text){
+    let start=0;
+    while(start<text.length){
+      const newline=text.indexOf('\n',start);
+      const end=newline===-1?text.length:newline+1;
+      const segment=text.slice(start,end);
+      if(ansiAtLineStart)ansiSemantic=semanticTerminalColor(segment);
+      const node=document.createElement('span');
+      node.textContent=segment;
+      if(ansiForeground)node.style.color=ansiForeground;
+      else if(ansiSemantic)node.style.color=ansiSemantic;
+      if(ansiBackground)node.style.backgroundColor=ansiBackground;
+      if(ansiBold)node.style.fontWeight='700';
+      plainOutput.appendChild(node);
+      ansiChars+=segment.length;
+      ansiAtLineStart=newline!==-1;
+      start=end;
+    }
+  }
+  function resetAnsiRenderer(chars=0){
+    ansiTail='';ansiForeground=null;ansiBackground=null;
+    ansiBold=false;ansiAtLineStart=true;ansiSemantic=null;ansiChars=chars;
+  }
+  function appendPlainOutput(data){
+    const input=ansiTail+String(data||'');
+    ansiTail='';
+    let buffer='';
+    const flush=()=>{if(buffer){writeAnsiText(buffer);buffer='';}};
+    for(let i=0;i<input.length;){
+      if(input[i]==='\x1b'){
+        flush();
+        if(i+1>=input.length){ansiTail=input.slice(i);break;}
+        const next=input[i+1];
+        if(next==='['){
+          let end=i+2;
+          while(end<input.length&&end-i<96&&!/[\x40-\x7e]/.test(input[end]))end++;
+          if(end===input.length){ansiTail=input.slice(i).slice(0,96);break;}
+          if(end-i>=96){i=end+1;continue;}
+          if(input[end]==='m')setAnsiStyle(input.slice(i+2,end));
+          i=end+1;continue;
+        }
+        if(next===']'){
+          let end=i+2;
+          while(end<input.length&&end-i<512){
+            if(input[end]==='\x07'){end++;break;}
+            if(input[end]==='\x1b'&&input[end+1]==='\\'){end+=2;break;}
+            end++;
+          }
+          if(end>=input.length&&end-i<512){ansiTail=input.slice(i);break;}
+          i=end;continue;
+        }
+        i+=2;continue;
+      }
+      const c=input[i++];
+      if(c==='\r'||c==='\b'||c==='\x07')continue;
+      if(c==='\n'||c==='\t'||c>=' ')buffer+=c;
+    }
+    flush();
+    if(ansiChars>110000){
+      const tail=plainOutput.textContent.slice(-65000);
+      plainOutput.textContent=tail;
+      ansiChars=tail.length;
+    }
+    plainOutput.scrollTop=plainOutput.scrollHeight;
   }
   function updateConsoleMode() {
     const showText = terminalReady && (forceTextView || !term);
@@ -293,7 +407,8 @@
     login.classList.add('hidden');
     statusBar.classList.remove('hidden');
     commandForm.classList.remove('hidden');
-    plainOutput.textContent = '[Connected to Railway Linux. Real shell output follows.]\n';
+    plainOutput.textContent = '[Connected to Railway Linux. ANSI colors enabled.]\n';
+    resetAnsiRenderer(plainOutput.textContent.length);
     if(enhanced){
       try {
       screen.style.display = 'block';
@@ -656,6 +771,7 @@
     if(!terminalReady)return;
     if(term)term.clear();
     plainOutput.textContent='';
+    resetAnsiRenderer();
     if(term && !forceTextView)term.focus();else commandLine.focus();
     notify('Only the local terminal display was cleared.');
     beep();

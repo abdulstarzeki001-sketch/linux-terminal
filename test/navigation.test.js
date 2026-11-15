@@ -139,3 +139,21 @@ test('Kali Night is the initial theme and reflects the published Kali palette',(
   assert.match(css,/body\.session-ready \.console-windowbar/);
   assert.match(css,/@media\(max-width:650px\)/);
 });
+
+test('real Kali Bash prompt and LS_COLORS survive container rebuilds',()=>{
+  const shell=readFileSync(join(__dirname,'..','server','kali-shell.sh'),'utf8');
+  const docker=readFileSync(join(__dirname,'..','Dockerfile'),'utf8');
+  assert.match(shell,/LS_COLORS=/);
+  assert.match(shell,/alias ls='ls --color=auto'/);
+  assert.match(shell,/PS1=/);
+  assert.match(shell,/38;2;73;174;230/);
+  assert.match(shell,/38;2;94;189;171/);
+  assert.match(shell,/38;2;254;164;76/);
+  assert.match(shell,/WORMSTAR_NO_COLOR/);
+  assert.match(docker,/COPY server\/kali-shell.sh/);
+  assert.match(docker,/\. \/usr\/local\/share\/wormstar-kali-shell.sh/);
+  assert.match(js,/function setAnsiStyle\(/);
+  assert.match(js,/function semanticTerminalColor\(/);
+  assert.match(js,/node\.textContent=segment/);
+  assert.doesNotMatch(js,/innerHTML\s*=/);
+});
