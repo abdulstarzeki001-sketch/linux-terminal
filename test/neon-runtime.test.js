@@ -170,8 +170,8 @@ test('theme switching does not persist command output or secrets',()=>{
   const h=harness();
   h.get('themeSelect').events.change({target:{value:'dracula'}});
   assert.equal(h.document.body.className,'theme-dracula');
-  assert.equal(h.prefs.get('wt_ui_theme'),'dracula');
-  assert.deepEqual([...h.prefs.keys()].sort(),['wt_ui_matrix','wt_ui_sound','wt_ui_theme']);
+  assert.equal(h.prefs.get('wt_ui_theme_v2'),'dracula');
+  assert.deepEqual([...h.prefs.keys()].sort(),['wt_ui_matrix','wt_ui_sound','wt_ui_theme_v2']);
 });
 
 

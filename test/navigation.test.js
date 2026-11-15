@@ -35,7 +35,7 @@ test('Real Railway password gate and xterm backend are not bypassed',()=>{
 });
 
 test('Theme/motion controls are supported without persisting sensitive terminal data',()=>{
-  for(const name of ['neon','catppuccin','dracula','tokyo','gruvbox']){
+  for(const name of ['kali','neon','catppuccin','dracula','tokyo','gruvbox']){
     assert.match(html,new RegExp('value="'+name+'"'));
     if(name!=='neon')assert.ok(css.includes('body.theme-'+name));
   }
@@ -123,4 +123,19 @@ test('authenticated command bar shows real commands with a text console fallback
   assert.match(js,/type:'input',data:command\+'\\n'/);
   assert.match(js,/Visual terminal unavailable\. Text console will be used/);
   assert.doesNotMatch(js,/innerHTML\s*=/);
+});
+
+test('Kali Night is the initial theme and reflects the published Kali palette',()=>{
+  assert.match(html,/<body class="theme-kali">/);
+  assert.match(html,/<option value="kali" selected>Kali Night/);
+  assert.match(html,/class="console-windowbar"/);
+  assert.match(html,/KALI NIGHT UI/);
+  assert.match(html,/Kali-inspired workspace/);
+  assert.match(html,/DEBIAN · RAILWAY/);
+  assert.match(js,/theme: saved\('theme_v2','kali'\)/);
+  assert.match(js,/themeNames = new Set\(\['kali'/);
+  for(const color of ['#252E35','#367BF0','#49AEE6','#5EBDAB','#FEA44C'])
+    assert.ok(css.includes(color),color);
+  assert.match(css,/body\.session-ready \.console-windowbar/);
+  assert.match(css,/@media\(max-width:650px\)/);
 });

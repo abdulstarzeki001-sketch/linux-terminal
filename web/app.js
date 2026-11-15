@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const themeNames = new Set(['neon','catppuccin','dracula','tokyo','gruvbox']);
+  const themeNames = new Set(['kali','neon','catppuccin','dracula','tokyo','gruvbox']);
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   const coarsePointer = window.matchMedia('(pointer: coarse)');
   const themeSelect = $('themeSelect');
@@ -66,11 +66,11 @@
     try { localStorage.setItem('wt_ui_' + key, value); } catch (_) { /* private mode */ }
   }
   const preferences = {
-    theme: saved('theme','catppuccin'),
+    theme: saved('theme_v2','kali'),
     matrix: saved('matrix','0') === '1',
     sound: saved('sound','0') === '1'
   };
-  if (!themeNames.has(preferences.theme)) preferences.theme = 'catppuccin';
+  if (!themeNames.has(preferences.theme)) preferences.theme = 'kali';
 
   function notify(text) {
     const box = $('toast');
@@ -134,6 +134,15 @@
   function terminalPalette() {
     const c = getComputedStyle(document.body);
     const value = name => c.getPropertyValue(name).trim();
+    if(preferences.theme==='kali') return {
+      background:'#252E35',foreground:'#E6E6E6',cursor:'#49AEE6',
+      selectionBackground:'rgba(73,174,230,.26)',
+      black:'#1F2229',red:'#D41919',green:'#5EBDAB',yellow:'#FEA44C',
+      blue:'#367BF0',magenta:'#9755B3',cyan:'#49AEE6',white:'#E6E6E6',
+      brightBlack:'#198388',brightRed:'#EC0101',brightGreen:'#47D4B9',
+      brightYellow:'#FF8A18',brightBlue:'#277FFF',brightMagenta:'#962AC3',
+      brightCyan:'#05A1F7',brightWhite:'#FFFFFF'
+    };
     return {
       background:value('--term-bg'),foreground:value('--text'),cursor:value('--neon'),
       selectionBackground:'rgba(152, 169, 245, 0.25)',
@@ -153,7 +162,7 @@
     preferences.theme = theme;
     if (rainRunning) matrixInk = getComputedStyle(document.body).getPropertyValue('--neon').trim() || '#89b4fa';
     themeSelect.value = theme;
-    save('theme',theme);
+    save('theme_v2',theme);
     if (term) term.options.theme = terminalPalette();
     document.querySelector('meta[name="theme-color"]')
       ?.setAttribute('content',getComputedStyle(document.body).getPropertyValue('--bg').trim());

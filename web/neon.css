@@ -451,3 +451,348 @@ body.keyboard-open .command-suggestions,body.keyboard-open .command-hint{display
  .command-suggestions{min-height:27px}
  .command-form{gap:4px}
 }
+
+
+/* ============================================================
+   WORMSTAR / KALI NIGHT EDITION 2026
+   Inspired by Kali's published terminal palette; no external
+   fonts, logo assets, scripts, or animations required.
+   Decorative UI only — the shell remains Railway Debian/Bash.
+   ============================================================ */
+body.theme-kali{
+  color-scheme:dark;
+  --bg:#081426;
+  --panel:rgba(18,30,46,.97);
+  --panel-alt:#152538;
+  --neon:#49AEE6;
+  --neon2:#367BF0;
+  --green:#5EBDAB;
+  --red:#E36B78;
+  --yellow:#FEA44C;
+  --text:#E6EFFA;
+  --muted:#A9BDD3;
+  --border:rgba(73,174,230,.22);
+  --term-bg:#252E35;
+  --shadow:rgba(0,0,0,.6);
+  --surface:#111f31;
+  --surface2:#192c40;
+  --stroke:rgba(132,190,239,.17);
+  --muted2:#9cb3cd;
+}
+body{
+  background:
+    radial-gradient(circle at 75% -28%,rgba(35,96,177,.28),transparent 54%),
+    linear-gradient(130deg,#071120 0%,#0c1929 52%,#09101e 100%);
+}
+body.theme-kali .app-frame{
+  background:transparent;
+}
+body.theme-kali .site-header{
+  min-height:70px;
+  padding-inline:clamp(14px,2.35vw,40px);
+  background:linear-gradient(110deg,rgba(8,18,34,.98),rgba(12,27,46,.96) 74%,rgba(11,32,55,.98));
+  box-shadow:inset 0 -1px rgba(102,169,226,.14);
+}
+.brand{gap:11px}
+body.theme-kali .brand-icon{
+  width:42px;height:42px;flex-shrink:0;
+  color:#aee8ff;
+  background:linear-gradient(150deg,#0b3965 4%,#103255 50%,#0b223c);
+  border:1px solid rgba(97,198,255,.45);
+  border-radius:12px;
+  box-shadow:0 0 24px rgba(25,121,219,.16),inset 0 1px rgba(255,255,255,.11);
+}
+.wormstar-mark{width:30px;height:30px;display:block;filter:drop-shadow(0 0 8px rgba(73,174,230,.25))}
+body.theme-kali .site-label{font-size:13px;letter-spacing:.15em;font-weight:850;line-height:1.25;color:#f1f7ff}
+body.theme-kali .brand-muted{font-weight:650;color:#66befe}
+body.theme-kali .sub-label{margin-top:3px;color:#9fb7d1;letter-spacing:.02em}
+.brand-separator{color:#5086b7;margin-inline:4px}
+.header-right{gap:12px}
+.edition-pill{
+  display:inline-flex;gap:8px;align-items:center;
+  color:#9dcff1;font:750 10px/1.25 ui-monospace,SFMono-Regular,Consolas,monospace;
+  letter-spacing:.09em;white-space:nowrap;
+  padding:8px 12px;border-radius:100px;
+  border:1px solid rgba(65,155,228,.28);background:rgba(16,74,124,.15)
+}
+.edition-dot{height:6px;width:6px;display:block;border-radius:50%;background:#49AEE6;box-shadow:0 0 9px rgba(73,174,230,.5)}
+body.theme-kali .connection-pill{
+  padding:7px 10px;background:rgba(12,25,42,.67);
+  border:1px solid rgba(149,188,222,.13);border-radius:8px;
+  letter-spacing:.025em;font-weight:720;
+}
+body.theme-kali .connection-pill[data-state="connected"]{color:#6ce0c4;border-color:rgba(94,189,171,.28)}
+body.theme-kali .back-to-wormstar{
+  min-height:38px;
+  border:1px solid rgba(139,188,227,.21);
+  background:linear-gradient(180deg,rgba(36,66,100,.25),rgba(20,34,51,.28));
+  color:#d7e9fc;border-radius:8px;
+}
+body.theme-kali .back-to-wormstar:hover{color:white;border-color:#49AEE6}
+body.theme-kali .toolbar{
+  min-height:60px;gap:14px;
+  background:#101c2d;
+  border-bottom:1px solid rgba(103,164,216,.22);
+  box-shadow:0 6px 18px rgba(0,0,0,.13)
+}
+body.theme-kali .toolbar-main{gap:21px}
+body.theme-kali .toolbar-label{
+  font-size:10px;color:#8faaca;letter-spacing:.105em;
+  padding-inline-end:20px;border-inline-end:1px solid rgba(105,151,192,.18)
+}
+body.theme-kali .live-indicator{background:var(--green);box-shadow:0 0 8px rgba(94,189,171,.45)}
+body.theme-kali .tool{
+  color:#cadaeb;background:rgba(48,80,113,.19);
+  border:1px solid rgba(106,160,203,.21);
+  min-height:37px;border-radius:8px;
+  font-weight:650;transition:background .14s,border-color .14s,transform .14s;
+}
+body.theme-kali .tool:hover:not(:disabled){
+  background:rgba(54,123,240,.19);border-color:rgba(73,174,230,.58);color:#e9f8ff
+}
+body.theme-kali .tool:active:not(:disabled){transform:translateY(1px)}
+body.theme-kali .tool:disabled{color:#8296b0;opacity:.46}
+body.theme-kali .ai-tool{background:rgba(36,106,182,.23);color:#87d3ff!important;border-color:rgba(57,146,224,.36)!important}
+body.theme-kali .tool-danger:not(:disabled){color:#ff9aa8}
+body.theme-kali .settings-menu summary{
+  background:#18283c;border:1px solid rgba(113,167,211,.26);
+  border-radius:8px;min-height:37px;color:#d5e6f8
+}
+body.theme-kali .settings-menu summary:hover{border-color:rgba(73,174,230,.7)}
+body.theme-kali .settings-menu[open] summary{color:var(--neon);border-color:#49AEE6}
+body.theme-kali .prefs-panel{
+  background:#142338;border:1px solid #356486;
+  border-radius:12px;box-shadow:0 22px 65px rgba(0,0,0,.52),0 0 0 1px rgba(70,145,208,.08)
+}
+body.theme-kali #themeSelect{background:#0e2034;color:#e6f4ff;border-color:#2a506b}
+body.theme-kali .terminal-stage{
+  position:relative;isolation:isolate;
+  background:
+    radial-gradient(circle at 16% 46%,rgba(27,91,160,.20),transparent 49%),
+    radial-gradient(circle at 82% 19%,rgba(11,75,141,.23),transparent 42%),
+    linear-gradient(140deg,#0a1423 0%,#0a1628 55%,#0b1d31 100%);
+}
+body.theme-kali .terminal-stage::before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background-image:linear-gradient(rgba(74,166,220,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(74,166,220,.045) 1px,transparent 1px);
+  background-size:36px 36px;
+  mask-image:linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,.06));
+}
+body.theme-kali .terminal-stage::after{
+  content:"";position:absolute;pointer-events:none;z-index:-1;
+  width:46vw;height:46vw;max-width:570px;max-height:570px;
+  left:-9vw;bottom:-27vw;border:1px solid rgba(57,145,206,.09);
+  border-radius:50%;
+  box-shadow:0 0 0 44px rgba(57,145,206,.025),0 0 0 88px rgba(57,145,206,.019),0 0 0 132px rgba(57,145,206,.012)
+}
+.console-windowbar{display:none}
+body.theme-kali .welcome-panel{max-width:770px;padding-block:5px}
+body.theme-kali .welcome-eyebrow{
+  display:inline-flex;align-items:center;gap:3px;color:#74cfff;
+  letter-spacing:.13em;font-size:11px
+}
+body.theme-kali .welcome-dot{background:#6ce0c4;box-shadow:0 0 16px rgba(108,224,196,.3)}
+.hero-divider{color:#527695;padding-inline:8px}
+body.theme-kali .welcome-panel h1{
+  margin:22px 0 18px;
+  color:#f1f7ff;letter-spacing:-.066em;
+  line-height:1.045;font-weight:900;
+  font-size:clamp(42px,5.3vw,82px);
+  text-shadow:0 4px 24px rgba(0,0,0,.14);
+}
+body.theme-kali .welcome-panel h1 em{
+  color:#56baff;
+  background:linear-gradient(100deg,#84ddff 8%,#3a94e6 62%,#2b78e2);
+  background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent
+}
+.hero-period{font-weight:450;color:#5ebdab;margin-left:.035em}
+body.theme-kali .welcome-panel>p{
+  max-width:535px;color:#b1c4db;font-size:14px;line-height:1.8
+}
+body.theme-kali .welcome-divider{
+  margin:31px 0 25px;
+  background:linear-gradient(90deg,rgba(82,164,230,.44),rgba(40,89,138,.05))
+}
+body.theme-kali .feature-stack{gap:19px}
+body.theme-kali .feature{gap:14px}
+body.theme-kali .feature-icon{
+  width:38px;height:38px;color:#86d5ff;
+  border:1px solid rgba(87,164,232,.28);
+  background:linear-gradient(155deg,rgba(38,94,159,.22),rgba(14,44,78,.19));
+  border-radius:9px
+}
+body.theme-kali .feature strong{font-size:13px;font-weight:720}
+body.theme-kali .feature small{font-size:11px;color:#91a9c2}
+body.theme-kali .welcome-foot{color:#6f8daa}
+body.theme-kali #login{
+  position:relative;isolation:isolate;
+  background:linear-gradient(149deg,rgba(25,44,68,.97),rgba(11,26,43,.98));
+  border:1px solid rgba(86,168,232,.37);
+  border-radius:16px;padding:34px;max-width:454px;
+  box-shadow:0 24px 76px rgba(0,0,0,.42),0 0 70px rgba(21,107,174,.07);
+  overflow:hidden;
+}
+body.theme-kali #login::before{
+  content:"";pointer-events:none;position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(100deg,rgba(76,172,245,.19),transparent 32%) top/100% 3px no-repeat
+}
+body.theme-kali #login .login-icon{
+  width:48px;height:48px;
+  border-radius:12px;
+  background:linear-gradient(135deg,rgba(49,107,179,.35),rgba(14,51,94,.48));
+  border:1px solid rgba(79,176,246,.38);color:#8ed9ff;
+  font-size:26px
+}
+body.theme-kali .access-badge{font-size:10px;color:#8bdcc9;letter-spacing:.075em}
+body.theme-kali #login h2{font-size:27px;line-height:1.15;font-weight:820;letter-spacing:-.04em;margin-top:16px}
+.title-period{color:#58baff}
+body.theme-kali .login-caption{color:#adc2da;font-size:12.5px}
+body.theme-kali .field-label{margin-top:17px;color:#cde2f6;font-weight:720}
+body.theme-kali #pw{
+  background:#0b1929;color:#ecf6ff;border-radius:8px;
+  border:1px solid rgba(104,164,215,.35);height:49px;font-size:14px
+}
+body.theme-kali #pw:focus{border-color:#65bffa;box-shadow:0 0 0 3px rgba(65,160,224,.09)}
+body.theme-kali #revealPassword{
+  border-radius:8px;background:#1a3049;color:#a4dcff;
+  border:1px solid rgba(106,170,221,.26);min-width:68px
+}
+body.theme-kali #go{
+  background:linear-gradient(95deg,#287bd1,#56b9ef);
+  color:white;border:1px solid rgba(135,207,255,.37);
+  box-shadow:0 8px 28px rgba(17,115,197,.23);
+  min-height:51px;border-radius:8px;
+  font-size:13px;font-weight:760
+}
+body.theme-kali #go:hover:not(:disabled){filter:brightness(1.12);box-shadow:0 9px 33px rgba(16,121,201,.34)}
+body.theme-kali .login-security{border-top:1px solid rgba(120,163,208,.18);color:#9eb7d3}
+body.theme-kali .login-security span{color:#5ebdab}
+body.theme-kali .terminal-footer{
+  background:#0b1727;border-top:1px solid rgba(109,165,209,.20);
+  min-height:39px;color:#94acc7
+}
+body.theme-kali .terminal-footer strong{color:#7bd7bf}
+.footer-led{display:inline-block;width:7px;height:7px;border-radius:50%;background:#5ebdab;box-shadow:0 0 10px rgba(94,189,171,.4);margin-inline-end:9px;vertical-align:middle}
+.footer-divider{color:#496886;padding-inline:7px}
+.footer-right{font:650 10px ui-monospace,SFMono-Regular,monospace;letter-spacing:.045em}
+body.session-ready .console-windowbar{
+  display:flex;align-items:center;gap:14px;flex:none;
+  padding:8px clamp(12px,1.5vw,23px);min-height:40px;
+  background:linear-gradient(90deg,#192c42,#142237);
+  border-bottom:1px solid rgba(115,174,221,.25);
+  color:#afc7de
+}
+.window-dots{display:flex;gap:6px;align-items:center}
+.window-dots i{display:block;width:9px;height:9px;border-radius:50%;background:#fb6c71;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.window-dots i:nth-child(2){background:#f5bc53}
+.window-dots i:nth-child(3){background:#5ebdab}
+.window-caption{font:750 10px/1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.1em;display:flex;gap:8px;align-items:center}
+.window-glyph{color:#64cbff;font-size:14px}
+.window-divider{color:#547ca0}
+.window-encryption{font:650 10px ui-monospace,monospace;letter-spacing:.07em;color:#83b9d9;margin-left:auto;white-space:nowrap}
+.window-lock{color:#5ebdab;margin-right:6px;font-size:9px}
+body.theme-kali.session-ready .terminal-stage{background:#252E35}
+body.theme-kali.session-ready .terminal-stage::before,
+body.theme-kali.session-ready .terminal-stage::after{display:none}
+body.theme-kali.session-ready #term{
+  background:#252E35;padding:14px 18px;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace
+}
+body.theme-kali .plain-console{background:#252E35}
+body.theme-kali .plain-console-label{background:#1f2b39;border-color:rgba(98,164,220,.20);color:#83d4ff}
+body.theme-kali #plainOutput{color:#E6E6E6;background:#252E35;font-size:13.5px;line-height:1.55}
+body.theme-kali .command-form{background:#122134;border-top:1px solid rgba(77,147,204,.29)}
+body.theme-kali .command-suggestions{gap:8px}
+body.theme-kali .commands-caption{color:#91aac4}
+body.theme-kali .quick-cmd{
+  background:#192e44;border:1px solid rgba(103,170,224,.27);
+  color:#a0dfff;border-radius:6px;font-size:12px;
+  transition:background .12s,border-color .12s
+}
+body.theme-kali .quick-cmd:hover:not(:disabled){background:#244b72;border-color:#49AEE6}
+body.theme-kali .command-entry{
+  min-height:48px;border:1px solid rgba(89,157,215,.46);
+  background:#0a1929;border-radius:9px
+}
+body.theme-kali .command-entry:focus-within{border-color:#69c2f5;box-shadow:0 0 0 3px rgba(57,149,218,.08)}
+body.theme-kali .command-prompt{color:#71d6bf;font-size:20px}
+body.theme-kali #commandLine{font-size:13px;min-height:45px}
+body.theme-kali #runCommand{
+  background:linear-gradient(90deg,#2478ce,#51b7ed);
+  color:#fff;min-width:85px;font-weight:750
+}
+body.theme-kali #runCommand:hover:not(:disabled){filter:brightness(1.08)}
+body.theme-kali .command-hint{color:#809bb9}
+body.theme-kali .extra-keys{background:#132438;border-top:1px solid rgba(84,158,221,.24)}
+body.theme-kali .extra-keys-heading{background:#132438}
+body.theme-kali .key-btn{
+  border:1px solid rgba(97,168,224,.31);border-radius:7px;
+  background:#192e44;color:#dcecff;box-shadow:0 1px 0 rgba(255,255,255,.025)
+}
+body.theme-kali .key-btn:hover{background:#274c70;color:#a3e7ff}
+body.theme-kali .key-quick{color:#76d4bf}
+body.theme-kali .ai-panel{background:linear-gradient(180deg,#13253b,#101d2d);border-left:1px solid rgba(91,164,230,.3)}
+body.theme-kali .ai-panel-head{border-bottom:1px solid rgba(91,164,230,.23)}
+body.theme-kali .ai-message{background:#1c3148;border-color:rgba(87,146,193,.3)}
+body.theme-kali .ai-message.ai-user{background:#153e60}
+body.theme-kali #aiPrompt{background:#0c1c2d;border-color:#365974}
+body.theme-kali #aiSend{background:#49AEE6;border-color:#49AEE6;color:#061526}
+body.theme-kali .ai-privacy{color:#f6c578}
+body.theme-kali #toast{background:#15334d;border-color:#4398c3;color:#e9f4ff}
+@media(max-width:1130px){
+  .edition-pill{display:none}
+  body.theme-kali .toolbar-label{display:none}
+  body.theme-kali .toolbar-main{gap:10px}
+}
+@media(max-width:850px){
+  body.theme-kali .terminal-stage{
+    background:radial-gradient(circle at 50% 20%,rgba(27,96,169,.18),transparent 68%),linear-gradient(140deg,#0b1a2d,#071222)
+  }
+  body.theme-kali #login{max-width:470px}
+}
+@media(max-width:650px){
+  body.theme-kali .site-header{min-height:58px;padding:7px 12px}
+  body.theme-kali .brand-icon{width:35px;height:35px;border-radius:9px}
+  .wormstar-mark{width:25px;height:25px}
+  body.theme-kali .site-label{font-size:11px;letter-spacing:.09em}
+  body.theme-kali .sub-label{font-size:9px;margin-top:1px}
+  .header-right{gap:7px}
+  body.theme-kali .connection-pill{padding:6px 8px;font-size:9px}
+  body.theme-kali .back-to-wormstar{font-size:10px;padding:7px 9px;min-height:34px}
+  body.theme-kali .toolbar{padding:7px 8px;gap:5px;min-height:49px}
+  body.theme-kali .tool{min-height:35px;padding:7px 10px;font-size:11px}
+  body.theme-kali .settings-menu summary{min-height:35px}
+  body.theme-kali #login{padding:22px;max-width:445px;gap:11px;border-radius:13px}
+  body.theme-kali #login h2{font-size:24px;margin-top:8px}
+  body.theme-kali .login-caption{font-size:12px}
+  body.theme-kali .field-label{margin-top:6px}
+  body.theme-kali .terminal-footer{min-height:33px}
+  body.session-ready .console-windowbar{min-height:33px;padding:6px 10px}
+  .window-caption{font-size:9px}
+  .window-encryption{font-size:9px}
+  body.theme-kali.session-ready #term{padding:9px 8px}
+  body.theme-kali .command-form{padding:7px 8px max(8px,env(safe-area-inset-bottom))}
+  body.theme-kali .command-entry{min-height:43px}
+  body.theme-kali #commandLine{font-size:12px;min-height:41px}
+  body.theme-kali #runCommand{min-width:59px}
+  body.theme-kali .quick-cmd{font-size:11px}
+}
+@media(max-width:390px){
+  body.theme-kali .sub-label{display:none}
+  body.theme-kali .connection-pill{font-size:0}
+  body.theme-kali .connection-pill::before{width:9px;height:9px}
+  body.theme-kali .back-to-wormstar{font-size:9px}
+  .window-encryption{display:none}
+}
+@media(max-height:620px){
+  body.theme-kali #login{padding:16px 20px;gap:7px}
+  body.theme-kali #login h2{margin-top:6px;font-size:22px}
+  body.theme-kali .login-caption{line-height:1.45}
+  body.theme-kali .field-label{margin-top:3px}
+  body.theme-kali #go{min-height:44px}
+}
+@media(prefers-reduced-motion:reduce){
+  body.theme-kali .tool,
+  body.theme-kali .quick-cmd,
+  body.theme-kali #go{transition:none}
+}
