@@ -311,9 +311,18 @@
         const stylesheet=document.createElement('link');
         stylesheet.rel='stylesheet';
         stylesheet.href='https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css';
+        const styleReady=new Promise((resolve,reject)=>{
+          stylesheet.onload=resolve;
+          stylesheet.onerror=()=>reject(new Error('Terminal styles could not be loaded.'));
+        });
         document.head.appendChild(stylesheet);
-        await loadExternalScript('https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js');
-        await loadExternalScript('https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js');
+        await Promise.all([
+          styleReady,
+          (async()=>{
+            await loadExternalScript('https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js');
+            await loadExternalScript('https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js');
+          })()
+        ]);
         if(typeof window.Terminal!=='function'||typeof window.FitAddon?.FitAddon!=='function')throw Error('Terminal libraries are not available.');
       })().catch(error=>{terminalLibrariesPromise=null;throw error;});
     }

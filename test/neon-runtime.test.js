@@ -161,8 +161,8 @@ test('rejected password returns to login with a readable error',()=>{
   socket.open();
   socket.message({type:'error',message:'كلمة المرور غير صحيحة'});
   assert.equal(h.get('connectionPill').dataset.state,'disconnected');
-  assert.match(h.get('err').textContent,/خادم Railway رفض الكلمة/);
-  assert.match(h.get('err').textContent,/الملء التلقائي/);
+  assert.match(h.get('err').textContent,/Railway rejected the supplied password/);
+  assert.match(h.get('err').textContent,/iPhone AutoFill/);
   assert.equal(h.get('login').classList.hidden,false);
 });
 
@@ -316,6 +316,8 @@ test('mobile Ctrl and Alt affect the next native iPhone character, not login',()
   const socket=h.connect();
   socket.open();
   socket.message({type:'ready'});
+  assert.equal(h.get('mobileKeys').classList.hidden,true);
+  h.get('keysToggle').events.click();
   assert.equal(h.get('mobileKeys').classList.hidden,false);
   const terminal=h.lastTerminal();
   h.modifier('ctrl');
@@ -363,7 +365,7 @@ test('iPhone reveals Railway field only on user tap and hides it again on logout
   h.get('revealPassword').events.click();
   assert.equal(h.get('pw').type,'text');
   assert.equal(h.get('revealPassword').attrs['aria-pressed'],'true');
-  assert.equal(h.get('revealPassword').textContent,'إخفاء');
+  assert.equal(h.get('revealPassword').textContent,'Hide');
   h.get('revealPassword').events.click();
   assert.equal(h.get('pw').type,'password');
   const socket=h.connect('test-typed-secret-only');
@@ -380,7 +382,7 @@ test('iPhone reveals Railway field only on user tap and hides it again on logout
 test('leading whitespace is flagged but not altered or stored in password transmission',()=>{
   const h=harness();
   const ws=h.connect('  intentional-leading-space');
-  assert.match(h.get('passwordHint').textContent,/مسافة طرفية/);
+  assert.match(h.get('passwordHint').textContent,/leading\/trailing whitespace/);
   ws.open();
   assert.equal(ws.sent[0].password,'  intentional-leading-space');
   assert.equal(JSON.stringify([...h.prefs]).includes('intentional-leading-space'),false);
@@ -393,7 +395,7 @@ test('backend connection errors remain distinct from an actual Railway password 
   ws.onerror();
   ws.close();
   assert.match(h.get('err').textContent,/WebSocket/);
-  assert.doesNotMatch(h.get('err').textContent,/خادم Railway رفض الكلمة/);
+  assert.doesNotMatch(h.get('err').textContent,/Railway rejected the supplied password/);
 });
 
 test('STAR AI panel requires terminal password and explicit user click, never executes shell input',()=>{
@@ -432,7 +434,7 @@ test('STAR AI disabled state is explicit and terminal output is only drafted, ne
   socket.message({type:'ready',aiEnabled:false});
   assert.equal(h.get('aiSend').disabled,true);
   assert.equal(h.get('aiExplain').disabled,true);
-  assert.match(h.get('aiState').textContent,/غير مهيأ/);
+  assert.match(h.get('aiState').textContent,/Not configured/);
   socket.message({type:'ready',aiEnabled:true});
   h.lastTerminal().buffer.active={
     length:1,
