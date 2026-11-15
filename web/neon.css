@@ -815,3 +815,11 @@ body.theme-kali .command-prompt{color:#60E0C4;text-shadow:0 0 15px rgba(94,189,1
 body.theme-kali #commandLine{color:#E6F4FF;caret-color:#49AEE6}
 body.theme-kali #runCommand{color:#FFFFFF}
 body.theme-kali .plain-console-label{background:linear-gradient(90deg,#1b344a,#172536);color:#72C8FF}
+
+
+/* Color priority: non-white defaults, readable ANSI status, URL and error accents. */
+body.theme-kali #term .xterm-screen{color:#97D8F3}
+body.theme-kali #plainOutput{color:#97D8F3}
+body.theme-kali .plain-console-label{color:#49AEE6}
+body.theme-kali .console-windowbar{color:#95C7ED}
+body.theme-kali .footer-led{background:#5EBDAB}

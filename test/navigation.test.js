@@ -157,3 +157,13 @@ test('real Kali Bash prompt and LS_COLORS survive container rebuilds',()=>{
   assert.match(js,/node\.textContent=segment/);
   assert.doesNotMatch(js,/innerHTML\s*=/);
 });
+
+test('Kali native terminal colors plain output without altering cursor apps',()=>{
+  assert.match(js,/function colorizeLiveOutput\(data\)/);
+  assert.match(js,/function colorizeOutputLine\(line\)/);
+  assert.match(js,/writeLiveOutput\(message\.data\)/);
+  assert.match(js,/writeLiveOutput\(line\)/);
+  assert.match(js,/inAlternateScreen/);
+  assert.match(js,/^\s*const outputColors=Object\.freeze\(/m);
+  assert.match(js,/background:'#252E35',foreground:'#97D8F3'/);
+});

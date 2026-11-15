@@ -135,7 +135,7 @@
     const c = getComputedStyle(document.body);
     const value = name => c.getPropertyValue(name).trim();
     if(preferences.theme==='kali') return {
-      background:'#252E35',foreground:'#CDE9F7',cursor:'#49AEE6',
+      background:'#252E35',foreground:'#97D8F3',cursor:'#49AEE6',
       selectionBackground:'rgba(73,174,230,.26)',
       black:'#1F2229',red:'#D41919',green:'#5EBDAB',yellow:'#FEA44C',
       blue:'#367BF0',magenta:'#9755B3',cyan:'#49AEE6',white:'#E6E6E6',
@@ -244,6 +244,7 @@
     resetAnsiRenderer();
     commandLine.value = '';
     forceTextView = false;
+    inAlternateScreen=false;
     document.body.classList.remove('session-ready');
   }
   function showLogin(message) {
@@ -390,6 +391,95 @@
     }
     plainOutput.scrollTop=plainOutput.scrollHeight;
   }
+
+  // Presentation-only highlighter for uncolored, line-oriented programs
+  // (apt, system tools, build logs). xterm still interprets the real PTY
+  // stream, and explicit ANSI colors, cursor motion and full-screen apps win.
+  // Do not format partial lines: Bash prompts, editing and progress stay live.
+  const outputColors=Object.freeze({
+    normal:'#97D8F3',
+    green:'#5EBDAB',cyan:'#49AEE6',blue:'#79B9FF',
+    violet:'#C6A7FF',amber:'#FEA44C',red:'#FF748C',
+    dim:'#8DA9C4',white:'#D3ECF8'
+  });
+  const sgrOutput=color=>{
+    const n=[1,3,5].map(p=>parseInt(color.slice(p,p+2),16));
+    return '\x1b[38;2;'+n.join(';')+'m';
+  };
+  const sgrEnd='\x1b[39m';
+  let inAlternateScreen=false;
+  function classifyOutput(line){
+    const s=line.trimStart();
+    if(/^(?:E:|Err:|error\b|fatal\b|fail(?:ed|ure)?\b|Traceback\b|Exception\b|command not found\b)/i.test(s))
+      return outputColors.red;
+    if(/^(?:W:|warn(?:ing)?\b|notice\b|deprecated\b|caution\b)/i.test(s))
+      return outputColors.amber;
+    if(/^(?:Hit:\d+|Get:\d+|Fetched\b|success\b|passed\b|✔|✓|\[OK\])/i.test(s))
+      return outputColors.green;
+    if(/^(?:Reading package lists|Building dependency tree|Reading state information|Calculating upgrade|Setting up |Unpacking |Preparing to unpack|Processing triggers|Downloading |Installing |Collecting |Requirement already satisfied)/i.test(s))
+      return outputColors.violet;
+    if(/^(?:\d+ upgraded|Need to get |After this operation|The following packages|The following NEW packages|Get:\d+)/i.test(s))
+      return outputColors.cyan;
+    if(/^(?:total \d+|drwx|lrwx|[-bcdpls][rwxstST-]{9}|NAME\s|USER\s|Filesystem\s|Mem:\s)/i.test(s))
+      return outputColors.blue;
+    if(/^(?:\$ |# |[A-Z][A-Z0-9 _-]{3,}:|--+|==+)/.test(s))
+      return outputColors.amber;
+    return outputColors.normal;
+  }
+  // Highlight meaningful tokens within a status line, retaining every byte
+  // of text and line endings (only zero-width ANSI SGR is inserted).
+  const consoleTokenPattern=/(https?:\/\/[^\s]+|(?:\/[\w.+@-]+){1,}|(?:\b(?:\d+(?:\.\d+)?\s?(?:kB|MB|GB|TB|bytes|KiB|MiB|GiB|ms|%))\b)|\b(?:Done|OK|success|successful|passed|complete|installed|ready|updated)\b|\b(?:failed|failure|error|fatal|denied|invalid|not found)\b|\b(?:warning|deprecated|notice)\b|\b(?:sudo|apt|apt-get|npm|node|python3?|git|curl|wget|bash|ls|grep)\b)/gi;
+  function tokenColor(token){
+    if(/^https?:\/\//i.test(token))return outputColors.blue;
+    if(token.startsWith('/'))return outputColors.cyan;
+    if(/\b(?:failed|failure|error|fatal|denied|invalid|not found)\b/i.test(token))return outputColors.red;
+    if(/\b(?:warning|deprecated|notice)\b/i.test(token))return outputColors.amber;
+    if(/\b(?:Done|OK|success|successful|passed|complete|installed|ready|updated)\b/i.test(token))return outputColors.green;
+    if(/^\d/.test(token))return outputColors.amber;
+    return outputColors.violet;
+  }
+  function colorizeOutputLine(line){
+    const content=line.replace(/\r?\n$/,'');
+    const ending=line.slice(content.length);
+    if(!content.trim()||content.length>2400||/[\x00-\x08\x0b-\x1f\x7f]/.test(content))
+      return line;
+    let result=sgrOutput(classifyOutput(content));
+    let previous=0;
+    consoleTokenPattern.lastIndex=0;
+    for(const match of content.matchAll(consoleTokenPattern)){
+      const token=match[0],index=match.index;
+      result+=content.slice(previous,index)+sgrOutput(tokenColor(token))+token+
+        sgrOutput(classifyOutput(content));
+      previous=index+token.length;
+    }
+    return result+content.slice(previous)+sgrEnd+ending;
+  }
+  function colorizeLiveOutput(data){
+    if(preferences.theme!=='kali')return data;
+    // Alternate-screen programs (vim, nano, top, less) must receive original
+    // byte streams including cursor-addressing and colors.
+    const beginsAlt=/\x1b\[\?(?:47|1047|1049)h/.test(data);
+    const endsAlt=/\x1b\[\?(?:47|1047|1049)l/.test(data);
+    if(inAlternateScreen||beginsAlt){
+      if(endsAlt)inAlternateScreen=false;
+      else if(beginsAlt)inAlternateScreen=true;
+      return data;
+    }
+    if(endsAlt){inAlternateScreen=false;return data;}
+    let result='',offset=0;
+    for(let end=data.indexOf('\n');end!==-1;end=data.indexOf('\n',offset)){
+      const line=data.slice(offset,end+1);
+      const rawControl=line.includes('\x1b')||/\r(?!\n)/.test(line);
+      result+=rawControl?line:colorizeOutputLine(line);
+      offset=end+1;
+    }
+    // Partial, cursor-managed text must be rendered immediately, unchanged.
+    return result+data.slice(offset);
+  }
+  function writeLiveOutput(data){
+    if(term)term.write(colorizeLiveOutput(data));
+  }
+
   function updateConsoleMode() {
     const showText = terminalReady && (forceTextView || !term);
     if (showText) plainConsole.classList.remove('hidden');
@@ -574,7 +664,7 @@
           for (const line of buffer) {
             appendPlainOutput(line);
             if(term) {
-              try {term.write(line);}
+              try {writeLiveOutput(line);}
               catch (_) {forceTextView=true;updateConsoleMode();}
             }
           }
@@ -587,7 +677,7 @@
         if (terminalReady) {
           appendPlainOutput(message.data);
           if(term) {
-            try {term.write(message.data);}
+            try {writeLiveOutput(message.data);}
             catch (_) {forceTextView=true;updateConsoleMode();}
           }
         } else if (buffer.join('').length < 16000) buffer.push(message.data);

@@ -526,3 +526,46 @@ test('ANSI sequences split across WebSocket frames retain original color',()=>{
   assert.doesNotMatch(h.get('plainOutput').textContent,/\x1b/);
   assert.ok(h.get('plainOutput').children.some(n=>n.style.color==='#49AEE6'));
 });
+
+test('native xterm highlights apt logs with green, blue, amber, purple and red ANSI',()=>{
+  const h=harness();
+  const socket=h.connect();
+  socket.open();socket.message({type:'ready'});
+  socket.message({type:'output',data:'Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]\r\n'});
+  socket.message({type:'output',data:'Reading package lists... Done\r\n'});
+  socket.message({type:'output',data:'W: Package warning on /var/lib/apt\r\n'});
+  socket.message({type:'output',data:'E: Failed to download 72 MB\r\n'});
+  const lines=h.lastTerminal().written;
+  assert.equal(lines.length,4);
+  for(const line of lines)assert.match(line,/\x1b\[38;2;/);
+  assert.match(lines[0],/\x1b\[38;2;94;189;171m/); // green status
+  assert.match(lines[0],/\x1b\[38;2;121;185;255m/); // blue URL
+  assert.match(lines[0],/\x1b\[38;2;254;164;76m/); // amber size
+  assert.match(lines[1],/\x1b\[38;2;198;167;255m/); // violet progress
+  assert.match(lines[2],/\x1b\[38;2;254;164;76m/); // amber warning
+  assert.match(lines[3],/\x1b\[38;2;255;116;140m/); // red error
+  assert.equal(lines[0].replace(/\x1b\[[\d;]*m/g,''),'Get:1 http://deb.debian.org/debian bookworm InRelease [151 kB]\r\n');
+});
+test('full-screen, explicit ANSI, carriage returns and partial Bash input stay untouched',()=>{
+  const h=harness();const socket=h.connect();
+  socket.open();socket.message({type:'ready'});
+  const samples=[
+    '\x1b[?1049h\x1b[Hnano full screen',
+    'Status: OK\n',
+    '\x1b[?1049l',
+    '\x1b[38;2;94;189;171mcolored prompt\x1b[0m\r\n',
+    '20% progress\r',
+    'partial command input'
+  ];
+  for(const data of samples)socket.message({type:'output',data});
+  const lines=h.lastTerminal().written;
+  assert.deepEqual(lines,samples);
+});
+test('native colorization disables for other themes',()=>{
+  const h=harness();h.get('themeSelect').events.change({target:{value:'dracula'}});
+  const socket=h.connect();
+  socket.open();socket.message({type:'ready'});
+  const output='E: missing package\r\n';
+  socket.message({type:'output',data:output});
+  assert.equal(h.lastTerminal().written.at(-1),output);
+});
