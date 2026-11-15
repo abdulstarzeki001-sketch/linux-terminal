@@ -207,4 +207,11 @@ wss.on('connection', (ws) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Terminal listening on port ${PORT}`);
+  // Free internal readiness probe: no provider API request, prompt, or credentials.
+  // A delayed check allows Railway's private networking to initialize.
+  setTimeout(()=>{
+    void checkAIStatus().then(status=>{
+      console.info('[STAR AI preflight]',status.reason);
+    }).catch(()=>console.warn('[STAR AI preflight] GATEWAY_UNREACHABLE'));
+  },5000).unref();
 });
