@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
-  <meta name="theme-color" content="#081426">
-  <title>Wormstar | Kali-Inspired Linux Terminal</title>
+  <meta name="theme-color" content="#0b0f19">
+  <title>Wormstar | Neon Glass Linux Terminal</title>
   <meta name="color-scheme" content="dark">
   <!-- xterm CSS and JavaScript are loaded only when the user connects. -->
   <link rel="stylesheet" href="neon.css">
 </head>
-<body class="theme-kali">
+<body class="theme-neon">
   <canvas id="matrix" aria-hidden="true"></canvas>
   <div id="toast" role="status" aria-live="polite"></div>
 
@@ -20,11 +20,11 @@
         <span class="brand-icon" aria-hidden="true"><svg class="wormstar-mark" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 12 13 32 22 15 31 32 37 12" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/><path d="m7 8 7-3h16l7 3" stroke="currentColor" stroke-opacity=".55" stroke-width="2" stroke-linecap="round"/></svg></span>
         <span class="brand-text">
           <span class="site-label">WORMSTAR <span class="brand-muted">/ TERMINAL</span></span>
-          <span class="sub-label">Kali-inspired workspace <span class="brand-separator">•</span> Railway Linux</span>
+          <span class="sub-label">Neon Glass workspace <span class="brand-separator">•</span> Railway Linux</span>
         </span>
       </a>
       <div class="header-right">
-        <span class="edition-pill"><span class="edition-dot" aria-hidden="true"></span> KALI NIGHT UI</span>
+        <span class="edition-pill"><span class="edition-dot" aria-hidden="true"></span> <span id="editionLabel">NEON GLASS UI</span></span>
         <span id="connectionPill" class="connection-pill" data-state="locked" role="status" aria-live="polite">Secured</span>
         <a class="back-to-wormstar" href="https://wormstar-ai-lab.abdulstarzeki001.workers.dev/"
            rel="noreferrer" referrerpolicy="no-referrer" aria-label="Return to Wormstar AI Lab">
@@ -54,9 +54,9 @@
             <label class="theme-control" for="themeSelect">
               <span>Color theme</span>
               <select id="themeSelect" aria-label="Choose terminal color theme">
-                <option value="kali" selected>Kali Night · Default</option>
+                <option value="neon" selected>Neon Glass · Default</option>
+                <option value="kali">Kali Night</option>
                 <option value="catppuccin">Catppuccin</option>
-                <option value="neon">Neon</option>
                 <option value="dracula">Dracula</option>
                 <option value="tokyo">Tokyo Night</option>
                 <option value="gruvbox">Gruvbox</option>
@@ -78,7 +78,7 @@
           <span class="window-encryption"><span class="window-lock">◆</span> WSS / ENCRYPTED</span>
         </div>
         <section class="welcome-panel" aria-label="Terminal workspace introduction">
-          <span class="welcome-eyebrow"><span class="welcome-dot" aria-hidden="true"></span> KALI-INSPIRED <span class="hero-divider">/</span> REMOTE OPERATIONS</span>
+          <span class="welcome-eyebrow"><span class="welcome-dot" aria-hidden="true"></span> CYBER TERMINAL <span class="hero-divider">/</span> REMOTE OPERATIONS</span>
           <h1>COMMAND.<br><em>CONTROL.</em><span class="hero-period">_</span></h1>
           <p>A sharp interface for your real Linux shell. Encrypted sessions, precise controls, and a workspace engineered to stay out of your way.</p>
           <div class="welcome-divider"></div>
@@ -87,7 +87,7 @@
             <div class="feature"><span class="feature-icon" aria-hidden="true">02</span><span><strong>Secure transport</strong><small>HTTPS · Encrypted WebSocket</small></span></div>
             <div class="feature"><span class="feature-icon" aria-hidden="true">03</span><span><strong>Integrated copilot</strong><small>STAR AI · Advice, never auto-execution</small></span></div>
           </div>
-          <div class="welcome-foot"><span>WORMSTAR // NIGHT OPERATIONS</span><span>BUILD • TEST • DEPLOY</span></div>
+          <div class="welcome-foot"><span>WORMSTAR // NEON OPERATIONS</span><span>BUILD • TEST • DEPLOY</span></div>
         </section>
         <div id="login">
           <div class="login-topline"><span class="login-icon" aria-hidden="true">⌘</span><span class="access-badge"><span aria-hidden="true">●</span> ENCRYPTED ACCESS</span></div>

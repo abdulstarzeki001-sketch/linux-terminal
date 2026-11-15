@@ -126,13 +126,14 @@ test('authenticated command bar shows real commands with a text console fallback
 });
 
 test('Kali Night is the initial theme and reflects the published Kali palette',()=>{
-  assert.match(html,/<body class="theme-kali">/);
-  assert.match(html,/<option value="kali" selected>Kali Night/);
+  assert.match(html,/<body class="theme-neon">/);
+  assert.match(html,/<option value="neon" selected>Neon Glass/);
+  assert.match(html,/<option value="kali">Kali Night/);
   assert.match(html,/class="console-windowbar"/);
-  assert.match(html,/KALI NIGHT UI/);
-  assert.match(html,/Kali-inspired workspace/);
+  assert.match(html,/NEON GLASS UI/);
+  assert.match(html,/Neon Glass workspace/);
   assert.match(html,/DEBIAN · RAILWAY/);
-  assert.match(js,/theme: saved\('theme_v2','kali'\)/);
+  assert.match(js,/theme: saved\('theme_v3','neon'\)/);
   assert.match(js,/themeNames = new Set\(\['kali'/);
   for(const color of ['#252E35','#367BF0','#49AEE6','#5EBDAB','#FEA44C'])
     assert.ok(css.includes(color),color);
@@ -166,4 +167,22 @@ test('Kali native terminal colors plain output without altering cursor apps',()=
   assert.match(js,/inAlternateScreen/);
   assert.match(js,/^\s*const outputColors=Object\.freeze\(/m);
   assert.match(js,/background:'#252E35',foreground:'#97D8F3'/);
+});
+
+test('supplied neon glass style maps to the real application elements',()=>{
+  assert.match(html,/<body class="theme-neon">/);
+  assert.match(html,/id="editionLabel">NEON GLASS UI/);
+  assert.match(html,/id="commandLine"/);
+  assert.match(css,/body\.theme-neon \.terminal-shell\{/);
+  assert.match(css,/body\.theme-neon \.terminal-stage\{/);
+  assert.match(css,/body\.theme-neon #term/);
+  assert.match(css,/body\.theme-neon \.command-form/);
+  assert.match(css,/body\.theme-neon #commandLine/);
+  assert.match(css,/body\.theme-neon #toast/);
+  assert.match(css,/#00f0ff/);
+  assert.match(css,/#ff2bd6/);
+  assert.match(css,/#3dff8b/);
+  assert.match(js,/theme: saved\('theme_v3','neon'\)/);
+  assert.match(js,/editionLabel\.textContent = theme==='neon'/);
+  assert.doesNotMatch(html,/id="termInput"/);
 });

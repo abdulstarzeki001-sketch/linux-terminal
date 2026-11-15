@@ -178,8 +178,8 @@ test('theme switching does not persist command output or secrets',()=>{
   const h=harness();
   h.get('themeSelect').events.change({target:{value:'dracula'}});
   assert.equal(h.document.body.className,'theme-dracula');
-  assert.equal(h.prefs.get('wt_ui_theme_v2'),'dracula');
-  assert.deepEqual([...h.prefs.keys()].sort(),['wt_ui_matrix','wt_ui_sound','wt_ui_theme_v2']);
+  assert.equal(h.prefs.get('wt_ui_theme_v3'),'dracula');
+  assert.deepEqual([...h.prefs.keys()].sort(),['wt_ui_matrix','wt_ui_sound','wt_ui_theme_v3']);
 });
 
 
@@ -568,4 +568,18 @@ test('native colorization disables for other themes',()=>{
   const output='E: missing package\r\n';
   socket.message({type:'output',data:output});
   assert.equal(h.lastTerminal().written.at(-1),output);
+});
+
+test('Neon Glass is default with colorized PTY and switching themes remains functional',()=>{
+  const h=harness();
+  assert.equal(h.document.body.className,'theme-neon');
+  assert.equal(h.get('editionLabel').textContent,'NEON GLASS UI');
+  const socket=h.connect();socket.open();socket.message({type:'ready'});
+  socket.message({type:'output',data:'E: failed to retrieve 12 MB\r\n'});
+  const output=h.lastTerminal().written.at(-1);
+  assert.match(output,/\x1b\[38;2;255;77;109m/);
+  assert.match(output,/\x1b\[38;2;255;209;102m/);
+  h.get('themeSelect').events.change({target:{value:'kali'}});
+  assert.equal(h.get('editionLabel').textContent,'KALI NIGHT UI');
+  assert.equal(h.prefs.get('wt_ui_theme_v3'),'kali');
 });

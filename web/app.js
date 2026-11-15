@@ -66,11 +66,11 @@
     try { localStorage.setItem('wt_ui_' + key, value); } catch (_) { /* private mode */ }
   }
   const preferences = {
-    theme: saved('theme_v2','kali'),
+    theme: saved('theme_v3','neon'),
     matrix: saved('matrix','0') === '1',
     sound: saved('sound','0') === '1'
   };
-  if (!themeNames.has(preferences.theme)) preferences.theme = 'kali';
+  if (!themeNames.has(preferences.theme)) preferences.theme = 'neon';
 
   function notify(text) {
     const box = $('toast');
@@ -162,7 +162,9 @@
     preferences.theme = theme;
     if (rainRunning) matrixInk = getComputedStyle(document.body).getPropertyValue('--neon').trim() || '#89b4fa';
     themeSelect.value = theme;
-    save('theme_v2',theme);
+    const editionLabel=$('editionLabel');
+    if(editionLabel)editionLabel.textContent = theme==='neon' ? 'NEON GLASS UI' : theme==='kali' ? 'KALI NIGHT UI' : theme.toUpperCase()+' UI';
+    save('theme_v3',theme);
     if (term) term.options.theme = terminalPalette();
     document.querySelector('meta[name="theme-color"]')
       ?.setAttribute('content',getComputedStyle(document.body).getPropertyValue('--bg').trim());
@@ -326,6 +328,11 @@
     if(/^\$\s/.test(line))return '#94D7FF';
     return null;
   }
+  function neonTextSemantic(color){
+    const colors={'#FF748C':'#FF4D6D','#FEA44C':'#FFD166','#5EBDAB':'#3DFF8B',
+      '#6ABBF2':'#00F0FF','#94D7FF':'#6FA8FF'};
+    return colors[color]||color;
+  }
   function writeAnsiText(text){
     let start=0;
     while(start<text.length){
@@ -336,7 +343,7 @@
       const node=document.createElement('span');
       node.textContent=segment;
       if(ansiForeground)node.style.color=ansiForeground;
-      else if(ansiSemantic)node.style.color=ansiSemantic;
+      else if(ansiSemantic)node.style.color=preferences.theme==='neon' ? neonTextSemantic(ansiSemantic) : ansiSemantic;
       if(ansiBackground)node.style.backgroundColor=ansiBackground;
       if(ansiBold)node.style.fontWeight='700';
       plainOutput.appendChild(node);
@@ -396,6 +403,12 @@
   // (apt, system tools, build logs). xterm still interprets the real PTY
   // stream, and explicit ANSI colors, cursor motion and full-screen apps win.
   // Do not format partial lines: Bash prompts, editing and progress stay live.
+  const neonOutputColors=Object.freeze({
+    normal:'#BCD8F6',green:'#3DFF8B',cyan:'#00F0FF',blue:'#6FA8FF',
+    violet:'#D393FF',amber:'#FFD166',red:'#FF4D6D',
+    dim:'#8FA3C4',white:'#D6E2FF'
+  });
+  function outputThemeColors(){return preferences.theme==='neon'?neonOutputColors:outputColors;}
   const outputColors=Object.freeze({
     normal:'#97D8F3',
     green:'#5EBDAB',cyan:'#49AEE6',blue:'#79B9FF',
@@ -411,32 +424,32 @@
   function classifyOutput(line){
     const row=line.trimStart();
     if(/^(?:E:|Err:|error\b|fatal\b|fail(?:ed|ure)?\b|Traceback\b|Exception\b|command not found\b)/i.test(row))
-      return outputColors.red;
+      return outputThemeColors().red;
     if(/^(?:W:|warn(?:ing)?\b|notice\b|deprecated\b|caution\b)/i.test(row))
-      return outputColors.amber;
+      return outputThemeColors().amber;
     if(/^(?:Hit:\d+|Get:\d+|Fetched\b|success\b|passed\b|✔|✓|\[OK\])/i.test(row))
-      return outputColors.green;
+      return outputThemeColors().green;
     if(/^(?:Reading package lists|Building dependency tree|Reading state information|Calculating upgrade|Setting up |Unpacking |Preparing to unpack|Processing triggers|Downloading |Installing |Collecting |Requirement already satisfied)/i.test(row))
-      return outputColors.violet;
+      return outputThemeColors().violet;
     if(/^(?:\d+ upgraded|Need to get |After this operation|The following packages|The following NEW packages|Get:\d+)/i.test(row))
-      return outputColors.cyan;
+      return outputThemeColors().cyan;
     if(/^(?:total \d+|drwx|lrwx|[-bcdpls][rwxstST-]{9}|NAME\s|USER\s|Filesystem\s|Mem:\s)/i.test(row))
-      return outputColors.blue;
+      return outputThemeColors().blue;
     if(/^(?:\$ |# |[A-Z][A-Z0-9 _-]{3,}:|--+|==+)/.test(row))
-      return outputColors.amber;
-    return outputColors.normal;
+      return outputThemeColors().amber;
+    return outputThemeColors().normal;
   }
   // Highlight meaningful tokens within a status line, retaining every byte
   // of text and line endings (only zero-width ANSI SGR is inserted).
   const consoleTokenPattern=/(https?:\/\/[^\s]+|(?:\/[\w.+@-]+){1,}|(?:\b(?:\d+(?:\.\d+)?\s?(?:kB|MB|GB|TB|bytes|KiB|MiB|GiB|ms|%))\b)|\b(?:Done|OK|success|successful|passed|complete|installed|ready|updated)\b|\b(?:failed|failure|error|fatal|denied|invalid|not found)\b|\b(?:warning|deprecated|notice)\b|\b(?:sudo|apt|apt-get|npm|node|python3?|git|curl|wget|bash|ls|grep)\b)/gi;
   function tokenColor(token){
-    if(/^https?:\/\//i.test(token))return outputColors.blue;
-    if(token.startsWith('/'))return outputColors.cyan;
-    if(/\b(?:failed|failure|error|fatal|denied|invalid|not found)\b/i.test(token))return outputColors.red;
-    if(/\b(?:warning|deprecated|notice)\b/i.test(token))return outputColors.amber;
-    if(/\b(?:Done|OK|success|successful|passed|complete|installed|ready|updated)\b/i.test(token))return outputColors.green;
-    if(/^\d/.test(token))return outputColors.amber;
-    return outputColors.violet;
+    if(/^https?:\/\//i.test(token))return outputThemeColors().blue;
+    if(token.startsWith('/'))return outputThemeColors().cyan;
+    if(/\b(?:failed|failure|error|fatal|denied|invalid|not found)\b/i.test(token))return outputThemeColors().red;
+    if(/\b(?:warning|deprecated|notice)\b/i.test(token))return outputThemeColors().amber;
+    if(/\b(?:Done|OK|success|successful|passed|complete|installed|ready|updated)\b/i.test(token))return outputThemeColors().green;
+    if(/^\d/.test(token))return outputThemeColors().amber;
+    return outputThemeColors().violet;
   }
   function colorizeOutputLine(line){
     const content=line.replace(/\r?\n$/,'');
@@ -455,7 +468,7 @@
     return result+content.slice(previous)+sgrEnd+ending;
   }
   function colorizeLiveOutput(data){
-    if(preferences.theme!=='kali')return data;
+    if(preferences.theme!=='kali'&&preferences.theme!=='neon')return data;
     // Alternate-screen programs (vim, nano, top, less) must receive original
     // byte streams including cursor-addressing and colors.
     const beginsAlt=/\x1b\[\?(?:47|1047|1049)h/.test(data);

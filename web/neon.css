@@ -823,3 +823,290 @@ body.theme-kali #plainOutput{color:#97D8F3}
 body.theme-kali .plain-console-label{color:#49AEE6}
 body.theme-kali .console-windowbar{color:#95C7ED}
 body.theme-kali .footer-led{background:#5EBDAB}
+
+
+/* ===========================================================
+   WORMSTAR NEON GLASS — adapted from the supplied stylesheet
+   Existing DOM mapped safely: .terminal -> .terminal-shell;
+   .screen -> #term / #plainOutput; .input-line -> .command-form.
+   The real PTY and existing password/AI/mobile controls are kept.
+   =========================================================== */
+body.theme-neon{
+  --bg:#0b0f19;--panel:rgba(18,24,38,.92);--panel-alt:#151c30;
+  --neon:#00f0ff;--neon2:#ff2bd6;--green:#3dff8b;
+  --red:#ff4d6d;--yellow:#ffd166;--text:#d6e2ff;
+  --muted:#9caccb;--border:rgba(0,240,255,.18);
+  --term-bg:#0c1422;--stroke:rgba(75,185,231,.22);
+  --muted2:#a9b6d0;--surface:#101a2c;--surface2:#192338;
+  --shadow:rgba(0,0,0,.6);
+  color:#d6e2ff;
+  background:
+    radial-gradient(circle at 20% 20%,rgba(0,240,255,.10),transparent 40%),
+    radial-gradient(circle at 80% 80%,rgba(255,43,214,.10),transparent 40%),
+    #0b0f19;
+  font-family:"Fira Code","Cascadia Code",ui-monospace,system-ui,sans-serif;
+  transition:background .4s,color .4s;
+}
+body.theme-neon .app-frame{
+  width:min(1060px,100%);
+  height:min(750px,calc(100dvh - 32px));
+  gap:9px;
+  max-width:none;
+}
+body.theme-neon .site-header{
+  background:rgba(12,18,31,.75);border:1px solid rgba(0,240,255,.11);
+  border-radius:12px;padding:10px 16px;min-height:61px;
+}
+body.theme-neon .brand-icon{
+  width:41px;height:41px;
+  color:#00f0ff;
+  background:linear-gradient(140deg,rgba(0,240,255,.15),rgba(255,43,214,.12));
+  border:1px solid rgba(0,240,255,.35);border-radius:11px;
+  box-shadow:0 0 19px rgba(0,240,255,.14)
+}
+body.theme-neon .site-label{color:#e8f8ff;letter-spacing:.13em;font-weight:850;font-size:13px}
+body.theme-neon .brand-muted{color:#00f0ff}
+body.theme-neon .sub-label{font-size:10px;color:#a4b6d6}
+body.theme-neon .edition-pill{
+  background:rgba(0,240,255,.055);border:1px solid rgba(0,240,255,.22);
+  color:#73eeff;font:720 10px "Fira Code",ui-monospace,monospace;letter-spacing:.06em
+}
+body.theme-neon .edition-dot{background:#00f0ff;box-shadow:0 0 9px rgba(0,240,255,.35)}
+body.theme-neon .connection-pill{
+  background:rgba(9,17,29,.80);border:1px solid rgba(0,240,255,.14);
+  color:#ffd166;border-radius:8px;padding:8px 11px
+}
+body.theme-neon .connection-pill[data-state="connected"]{color:#3dff8b;border-color:rgba(61,255,139,.31)}
+body.theme-neon .connection-pill[data-state="disconnected"]{color:#ff4d6d}
+body.theme-neon .back-to-wormstar{
+  border:1px solid rgba(0,240,255,.25);background:rgba(0,240,255,.045);
+  color:#a9f4ff;border-radius:8px;min-height:37px
+}
+body.theme-neon .back-to-wormstar:hover{color:#00f0ff;background:rgba(0,240,255,.10)}
+body.theme-neon .terminal-shell{
+  border:1px solid rgba(0,240,255,.18);border-radius:14px;
+  background:rgba(18,24,38,.92);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  box-shadow:0 20px 60px rgba(0,0,0,.60),0 0 40px rgba(0,240,255,.13);
+}
+body.theme-neon .toolbar{
+  border-bottom:1px solid rgba(0,240,255,.18);
+  background:rgba(5,11,22,.45);min-height:54px;
+  padding:9px 12px;gap:11px;
+}
+body.theme-neon .toolbar-label{
+  color:#80b9d0;font:750 10px "Fira Code",ui-monospace,monospace;
+  letter-spacing:.09em;border-inline-end:1px solid rgba(0,240,255,.16);padding-right:12px
+}
+body.theme-neon .live-indicator{background:#3dff8b;box-shadow:0 0 9px rgba(61,255,139,.3)}
+body.theme-neon .tool{
+  min-height:36px;border-radius:9px;
+  background:rgba(0,240,255,.035);
+  border:1px solid rgba(0,240,255,.16);
+  color:#c7e9fc;font-size:12px
+}
+body.theme-neon .tool:hover:not(:disabled){
+  color:#00f0ff;border-color:rgba(0,240,255,.46);background:rgba(0,240,255,.085)
+}
+body.theme-neon .tool.ai-tool{color:#ffc5fb!important;border-color:rgba(255,43,214,.36)!important;background:rgba(255,43,214,.08)}
+body.theme-neon .tool-danger:not(:disabled){color:#ff788c;border-color:rgba(255,77,109,.29)}
+body.theme-neon .settings-menu summary{
+  min-height:36px;border:1px solid rgba(255,43,214,.26);background:rgba(255,43,214,.055);
+  border-radius:9px;color:#f7ccff
+}
+body.theme-neon .prefs-panel{
+  background:#131d32;border:1px solid rgba(0,240,255,.30);
+  border-radius:12px;box-shadow:0 20px 65px rgba(0,0,0,.6),0 0 25px rgba(0,240,255,.08)
+}
+body.theme-neon #themeSelect{
+  background:#0b1424;border:1px solid rgba(0,240,255,.32);
+  color:#d6e2ff;border-radius:9px
+}
+body.theme-neon .terminal-stage{
+  background:
+    radial-gradient(circle at 15% 25%,rgba(0,240,255,.065),transparent 38%),
+    radial-gradient(circle at 90% 80%,rgba(255,43,214,.055),transparent 48%),
+    #0c1422
+}
+body.theme-neon .terminal-stage::before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(90deg,rgba(0,240,255,.035) 1px,transparent 1px),
+             linear-gradient(rgba(0,240,255,.035) 1px,transparent 1px);
+  background-size:32px 32px;
+  mask-image:linear-gradient(90deg,rgba(0,0,0,.3),transparent 88%)
+}
+body.theme-neon .welcome-panel h1{color:#edfaff}
+body.theme-neon .welcome-panel h1 em{color:#ff2bd6;background:linear-gradient(95deg,#ff72eb,#ff2bd6 45%,#00f0ff);
+  background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+body.theme-neon .hero-period{color:#00f0ff}
+body.theme-neon .welcome-eyebrow{color:#00f0ff;font-size:10px}
+body.theme-neon .welcome-dot{background:#3dff8b;box-shadow:0 0 8px rgba(61,255,139,.45)}
+body.theme-neon .welcome-panel>p{color:#b5c5df}
+body.theme-neon .feature-icon{
+  border:1px solid rgba(0,240,255,.25);border-radius:10px;
+  color:#00f0ff;background:rgba(0,240,255,.045)
+}
+body.theme-neon .feature:nth-child(2) .feature-icon{color:#3dff8b;border-color:rgba(61,255,139,.22)}
+body.theme-neon .feature:nth-child(3) .feature-icon{color:#ff8aeb;border-color:rgba(255,43,214,.25)}
+body.theme-neon .feature strong{color:#e5f4ff}
+body.theme-neon .feature small{color:#9caecb}
+body.theme-neon .welcome-divider{background:linear-gradient(90deg,rgba(0,240,255,.32),transparent)}
+body.theme-neon .welcome-foot{color:#7d91b5}
+body.theme-neon #login{
+  max-width:430px;
+  background:linear-gradient(152deg,rgba(25,31,49,.97),rgba(14,20,35,.98));
+  border:1px solid rgba(0,240,255,.28);border-radius:14px;
+  padding:28px;box-shadow:0 20px 55px rgba(0,0,0,.4),0 0 25px rgba(0,240,255,.05)
+}
+body.theme-neon #login::before{background:linear-gradient(90deg,#00f0ff,#ff2bd6,transparent 85%) top/100% 2px no-repeat}
+body.theme-neon #login .login-icon{color:#00f0ff;border-color:rgba(0,240,255,.29);background:rgba(0,240,255,.06)}
+body.theme-neon .access-badge{color:#3dff8b}
+body.theme-neon #login h2{font-size:26px;color:#e8f5ff}
+body.theme-neon .title-period{color:#ff2bd6}
+body.theme-neon .login-caption,body.theme-neon #passwordHint{color:#aebfd8}
+body.theme-neon .field-label{color:#d6e2ff}
+body.theme-neon #pw{
+  background:#0b1423;color:#d6e2ff;border:1px solid rgba(0,240,255,.27);
+  border-radius:9px;min-height:48px
+}
+body.theme-neon #pw:focus{border-color:#00f0ff;box-shadow:0 0 0 3px rgba(0,240,255,.10)}
+body.theme-neon #revealPassword{border-color:rgba(0,240,255,.18);background:#17233a;color:#89edff;border-radius:9px}
+body.theme-neon #go{
+  background:linear-gradient(95deg,#00dbe7,#54dbe3);
+  color:#07121d;min-height:49px;font-weight:850;border:0;border-radius:9px;
+  box-shadow:0 7px 28px rgba(0,240,255,.14)
+}
+body.theme-neon #go:hover:not(:disabled){box-shadow:0 8px 32px rgba(0,240,255,.25)}
+body.theme-neon .login-security{border-top:1px solid rgba(0,240,255,.13);color:#9caccb}
+body.theme-neon .login-security span{color:#3dff8b}
+body.theme-neon.session-ready .terminal-stage{background:#0c1422}
+body.session-ready .console-windowbar{
+  background:rgba(0,0,0,.30);
+  min-height:41px;border-bottom:1px solid rgba(0,240,255,.16);
+  display:flex;align-items:center;gap:12px;padding:10px 14px
+}
+body.theme-neon .window-dots i:nth-child(1){background:#ff5f57}
+body.theme-neon .window-dots i:nth-child(2){background:#febc2e}
+body.theme-neon .window-dots i:nth-child(3){background:#28c840}
+body.theme-neon .window-caption{font:720 11px "Fira Code",ui-monospace,monospace;color:#9ec2db;letter-spacing:.035em}
+body.theme-neon .window-glyph{color:#ff2bd6}
+body.theme-neon .window-encryption{color:#87cdd6;font-size:10px}
+body.theme-neon .window-lock{color:#3dff8b}
+body.theme-neon.session-ready #term{
+  background:#0c1422; padding:14px 18px;
+  font-size:13.5px;line-height:1.65
+}
+body.theme-neon #term .xterm-viewport{
+  scrollbar-width:thin;scrollbar-color:#00f0ff transparent
+}
+body.theme-neon .plain-console{background:#0c1422}
+body.theme-neon .plain-console-label{
+  background:#111b2e;border-color:rgba(0,240,255,.2);
+  color:#00f0ff;font-size:11px
+}
+body.theme-neon #plainOutput{
+  color:#c2dbf6;background:#0c1422;padding:14px 18px;
+  font:13.5px/1.65 "Fira Code","Cascadia Code",ui-monospace,Consolas,monospace;
+  scrollbar-width:thin;scrollbar-color:#00f0ff transparent
+}
+body.theme-neon #plainOutput span{white-space:pre-wrap;overflow-wrap:anywhere}
+body.theme-neon .command-form{
+  background:rgba(4,11,22,.65);border-top:1px solid rgba(0,240,255,.16);
+  padding:10px 18px max(14px,env(safe-area-inset-bottom));gap:9px
+}
+body.theme-neon .commands-caption{color:#8595b4}
+body.theme-neon .command-suggestions{gap:8px;scrollbar-width:thin}
+body.theme-neon .quick-cmd{
+  background:rgba(0,240,255,.04);color:#00f0ff;
+  border:1px solid rgba(0,240,255,.21);border-radius:8px;
+  font:750 12px "Fira Code",ui-monospace,monospace;
+  min-height:33px
+}
+body.theme-neon .quick-cmd:nth-of-type(2),body.theme-neon .quick-cmd:nth-of-type(5){
+  color:#ffabd8;border-color:rgba(255,43,214,.28)
+}
+body.theme-neon .quick-cmd:nth-of-type(3),body.theme-neon .quick-cmd:nth-of-type(6){
+  color:#84ffc4;border-color:rgba(61,255,139,.24)
+}
+body.theme-neon .quick-cmd:hover:not(:disabled){background:rgba(0,240,255,.10);border-color:#00f0ff}
+body.theme-neon .command-entry{
+  min-height:46px;gap:8px;padding-left:12px;
+  border:1px solid rgba(0,240,255,.29);border-radius:9px;background:rgba(5,12,24,.95)
+}
+body.theme-neon .command-entry:focus-within{border-color:#00f0ff;box-shadow:0 0 0 2px rgba(0,240,255,.10)}
+body.theme-neon .command-prompt{color:#3dff8b;font:850 18px ui-monospace,monospace}
+body.theme-neon #commandLine{
+  color:#d6e2ff;font:13.5px "Fira Code",ui-monospace,monospace;
+  caret-color:#00f0ff;min-height:44px
+}
+body.theme-neon #commandLine::placeholder{color:#879cbd}
+body.theme-neon #runCommand{
+  background:linear-gradient(115deg,#00deeb,#6ce6e5);
+  color:#081522;font-weight:850;min-width:72px
+}
+body.theme-neon .command-hint{font-size:10px;color:#91a5c5}
+body.theme-neon .extra-keys{background:#121c2f;border-top:1px solid rgba(0,240,255,.14)}
+body.theme-neon .extra-keys-heading{background:#121c2f;color:#8eb5cf}
+body.theme-neon .key-btn{
+  border:1px solid rgba(0,240,255,.16);background:#182238;
+  color:#c6e3fa;border-radius:8px
+}
+body.theme-neon .key-quick{color:#3dff8b}
+body.theme-neon .ai-panel{
+  background:linear-gradient(150deg,rgba(21,29,51,.98),rgba(9,19,36,.98));
+  border-left:1px solid rgba(255,43,214,.33);
+  box-shadow:-16px 0 42px rgba(0,0,0,.55)
+}
+body.theme-neon .ai-panel-head{border-bottom:1px solid rgba(255,43,214,.20)}
+body.theme-neon .ai-panel-head strong{color:#ffe0fc}
+body.theme-neon .ai-message{border-color:rgba(0,240,255,.20);background:#17263e}
+body.theme-neon .ai-message.ai-user{background:rgba(255,43,214,.095);border-color:rgba(255,43,214,.24)}
+body.theme-neon .ai-privacy{color:#ffd166}
+body.theme-neon #aiPrompt{background:#0c1628;border-color:rgba(0,240,255,.22);color:#d6e2ff}
+body.theme-neon #aiSend{background:#ff2bd6;color:#190f24;border-color:#ff2bd6}
+body.theme-neon .terminal-footer{
+  background:#0e1829;border-top:1px solid rgba(0,240,255,.15);
+  color:#849fc0
+}
+body.theme-neon .terminal-footer strong{color:#3dff8b}
+body.theme-neon .footer-led{background:#3dff8b;box-shadow:0 0 8px rgba(61,255,139,.4)}
+body.theme-neon #toast{
+  background:rgba(18,24,38,.95);
+  color:#d6e2ff;border:1px solid #00f0ff;
+  box-shadow:0 0 20px rgba(0,240,255,.3);border-radius:10px
+}
+@media(max-width:850px){
+  body.theme-neon .app-frame{width:100%;height:min(100dvh,calc(100dvh - 10px))}
+  body.theme-neon .terminal-shell{border-radius:10px}
+}
+@media(max-width:650px){
+  body.theme-neon{padding:0}
+  body.theme-neon .app-frame{
+    position:fixed;inset:0;width:100%;height:var(--terminal-viewport-height,100dvh);gap:0
+  }
+  body.theme-neon .site-header{border-radius:0;border-inline:0;border-top:0;min-height:54px;padding:7px 10px}
+  body.theme-neon .terminal-shell{width:100%;border:0;border-radius:0;box-shadow:none}
+  body.theme-neon .toolbar{padding:6px 8px;gap:6px}
+  body.theme-neon .tool{min-height:35px;padding:7px 9px;font-size:11px}
+  body.theme-neon .terminal-stage{min-height:0}
+  body.theme-neon #login{max-width:440px;padding:20px 17px;gap:9px}
+  body.theme-neon #login h2{font-size:23px}
+  body.theme-neon.session-ready #term{padding:8px 10px}
+  body.theme-neon #plainOutput{padding:10px 12px;font-size:12.5px}
+  body.theme-neon .command-form{padding:7px 8px max(8px,env(safe-area-inset-bottom));gap:6px}
+  body.theme-neon #commandLine{font-size:12.5px;min-height:40px}
+  body.theme-neon #runCommand{min-width:58px}
+  body.theme-neon .quick-cmd{font-size:11px;min-height:31px}
+  body.theme-neon .console-windowbar{min-height:34px;padding:8px 10px}
+  body.keyboard-open.theme-neon .site-header,
+  body.keyboard-open.theme-neon .toolbar,
+  body.keyboard-open.theme-neon .terminal-footer{display:none}
+}
+@media(max-height:620px){
+  body.theme-neon #login{padding:14px 18px;gap:7px}
+  body.theme-neon #go{min-height:42px}
+}
+@media(prefers-reduced-motion:reduce){
+  body.theme-neon{transition:none}
+  body.theme-neon .tool{transition:none}
+}
