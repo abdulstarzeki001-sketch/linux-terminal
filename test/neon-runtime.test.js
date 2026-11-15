@@ -52,7 +52,7 @@ function harness(options={}){
       terminal=this;
     }
     loadAddon(addon){this.addon=addon;}
-    open(){this.opened=true;}
+    open(){if(options.failNativeOpen)throw new Error('Simulated native renderer failure');this.opened=true;}
     onData(fn){this.dataHandler=fn;}
     onResize(fn){this.resizeHandler=fn;}
     focus(){this.focused=true;}
@@ -467,4 +467,23 @@ test('authenticated command form sends real shell input, without sending anythin
   h.get('disconnect').events.click();
   assert.equal(h.get('commandForm').classList.hidden,true);
   assert.equal(h.get('plainOutput').textContent,'');
+});
+
+test('native terminal renderer failure keeps the authenticated session and text command bar',()=>{
+  const h=harness({failNativeOpen:true});
+  const socket=h.connect();
+  socket.open();
+  socket.message({type:'ready'});
+  assert.equal(h.get('connectionPill').dataset.state,'connected');
+  assert.equal(h.get('plainConsole').classList.hidden,false);
+  assert.equal(h.get('commandForm').classList.hidden,false);
+  assert.equal(h.get('commandLine').disabled,false);
+  h.get('commandLine').value='whoami';
+  const before=socket.sent.length;
+  h.get('commandForm').events.submit({preventDefault(){}});
+  assert.equal(socket.sent.length,before+1);
+  assert.equal(socket.sent.at(-1).type,'input');
+  assert.equal(socket.sent.at(-1).data,'whoami\n');
+  socket.message({type:'output',data:'tuser\r\n'});
+  assert.match(h.get('plainOutput').textContent,/tuser/);
 });

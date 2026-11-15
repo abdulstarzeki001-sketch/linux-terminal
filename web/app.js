@@ -286,6 +286,7 @@
     commandForm.classList.remove('hidden');
     plainOutput.textContent = '[Connected to Railway Linux. Real shell output follows.]\n';
     if(enhanced){
+      try {
       screen.style.display = 'block';
       term = new window.Terminal({
         cursorBlink:!reduced.matches,
@@ -312,6 +313,16 @@
         } else send({type:'input',data});
       });
       term.onResize(({cols,rows}) => send({type:'resize',cols,rows}));
+      } catch (_) {
+        // xterm can fail to initialize even after its assets load.
+        // Keep the authenticated Railway session; the text view is functional.
+        try { term?.dispose(); } catch (_) {}
+        term=null;
+        fit=null;
+        screen.replaceChildren();
+        screen.style.display='none';
+        commandHint.textContent='Visual renderer failed. Real Linux text mode is available.';
+      }
     }
     terminalReady = true;
     connecting = false;
@@ -438,7 +449,10 @@
           startTerminal();
           for (const line of buffer) {
             appendPlainOutput(line);
-            if(term)term.write(line);
+            if(term) {
+              try {term.write(line);}
+              catch (_) {forceTextView=true;updateConsoleMode();}
+            }
           }
         } catch (e) {
           authFailure = e.message;
@@ -448,7 +462,10 @@
         typeof message.data==='string') {
         if (terminalReady) {
           appendPlainOutput(message.data);
-          if(term)term.write(message.data);
+          if(term) {
+            try {term.write(message.data);}
+            catch (_) {forceTextView=true;updateConsoleMode();}
+          }
         } else if (buffer.join('').length < 16000) buffer.push(message.data);
       } else if (message.type==='ai_busy') {
         aiBusy=true;
