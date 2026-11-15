@@ -288,6 +288,7 @@ test('Fn row exposes F1-F12 and Insert without sending a command when toggled',(
   const socket=h.connect();
   socket.open();
   socket.message({type:'ready'});
+  h.get('keysToggle').events.click();
   const before=socket.sent.filter(msg=>msg.type==='input').length;
   h.fn();
   assert.equal(h.get('functionKeys').classList.hidden,false);
