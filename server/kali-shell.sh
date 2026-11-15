@@ -1,6 +1,18 @@
 # Wormstar Kali-inspired color profile for Railway Debian/Bash sessions.
-# Styling only: this does not change the OS, execute tools, or escalate privileges.
+# Interactive Bash settings are persisted through the /home/tuser volume symlink.
 case $- in *i*) ;; *) return 0 ;; esac
+export HISTFILE="$HOME/.bash_history"
+export HISTSIZE=100000 HISTFILESIZE=200000
+export HISTCONTROL=ignoreboth:erasedups
+shopt -s histappend
+# Write history after each command rather than only on clean process exit.
+if [ -n "${PROMPT_COMMAND:-}" ]; then
+  PROMPT_COMMAND="history -a; $PROMPT_COMMAND"
+else
+  PROMPT_COMMAND='history -a'
+fi
+export PATH="$HOME/.venv/bin:$HOME/.npm-global/bin:$HOME/.local/bin:$HOME/go/bin:$HOME/.cargo/bin:$PATH"
+export NPM_CONFIG_PREFIX="$HOME/.npm-global"
 if [ -z "${NO_COLOR:-}" ] && [ -z "${WORMSTAR_NO_COLOR:-}" ]; then
   export CLICOLOR=1
   export COLORTERM=truecolor

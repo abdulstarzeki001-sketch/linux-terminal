@@ -73,9 +73,11 @@ always on — the whole setup happens in the browser, no CLI needed.
 5. Open the generated `https://….up.railway.app` URL, enter the password,
    and you have a Linux terminal in the browser.
 
-Notes: Railway's Hobby plan is $5/month (includes $5 of usage). The
-container filesystem is ephemeral — anything installed with `apt` or saved
-in `$HOME` disappears on redeploy. WebSockets work out of the box.
+Notes: Railway containers are ephemeral, but this production service now mounts
+`wormstar-terminal-data` at `/persist`. Files under `/home/tuser` are kept on
+that volume. System packages are recorded and reapplied on fresh images. Storage
+is billed separately and subject to your plan's volume limit. WebSockets work
+out of the box.
 
 ## Deploy to Fly.io (later)
 
@@ -184,3 +186,43 @@ node --test test/*.test.js
 
 All provider tests use mocked responses except the in-process HTTP gateway test,
 which runs against localhost only. They do not use a paid provider key.
+
+
+## Persistent Railway home and tools
+
+The production Railway terminal uses volume `wormstar-terminal-data` mounted
+at `/persist`. When a new image starts, its root entrypoint initializes the
+volume, seeds the default user profile and redirects `/home/tuser` to
+`/persist/home/tuser`. The web server and Bash run as unprivileged `tuser`.
+
+- Files, repositories, dotfiles and Bash history inside `/home/tuser` persist.
+  History flushes after each command; **do not type secrets in shell commands**.
+- Python `pip install <tool>` installs to the persistent `~/.venv`.
+- `npm install -g <tool>` installs to the persistent `~/.npm-global`.
+- `sudo apt install <package>` or `sudo apt-get install <package>` records
+  manually installed packages in `/persist/state/apt-manual.txt` through an
+  APT hook and wrapper. Missing packages get reinstalled on redeploy.
+- A successful `sudo apt upgrade` enables automatically reapplying the system
+  upgrade on later deployments. This may delay startup. Use
+  `persist auto-upgrade off` to disable replay, or `persist upgrade` to
+  run updates now and opt in again.
+- `persist status` displays the catalog size and backup information;
+  `persist save` rescans manual package inventory. Package restoration logs
+  are at `/persist/state/restore.log`.
+
+**Limits:** The volume is not a snapshot of the entire operating system.
+Manual edits outside the persistent home (such as `/etc`, `/opt` or
+`/usr/local`) still disappear on redeploy unless added to the Dockerfile.
+A package that disappears from Debian repositories cannot always be restored.
+Existing files from *prior ephemeral deployments* are not retroactively
+recovered. Running processes and terminal sessions stop on deployment.
+Volume storage is limited by the Railway plan (currently a small 500 MB volume);
+installing many large tools can fill it. Enable automatic backups from the
+Railway service **Backups** tab and export critical projects to GitHub.
+
+For local Docker Compose the equivalent persistent mapping is named volume
+`wormstar_data:/persist`. Avoid `docker compose down -v`, which deletes it.
+
+The terminal service needs `RAILWAY_RUN_UID=0` for root-owned Railway volume
+mounts, but drops to `tuser` before executing Node or Bash. The original
+Railway password and separate AI gateway secrets are unchanged.

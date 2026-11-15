@@ -4,7 +4,7 @@ FROM node:20-bookworm
 # build-essential and python3 are needed to compile node-pty.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 python3-pip python3-venv \
-      build-essential git nano vim less curl wget ca-certificates \
+      build-essential git nano vim less curl wget ca-certificates gosu \
       sudo procps htop jq unzip zip openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,16 +23,28 @@ RUN npm install --omit=dev
 COPY server/index.js ./
 COPY server/ai.js ./
 COPY server/kali-shell.sh /usr/local/share/wormstar-kali-shell.sh
+COPY server/entrypoint.sh /usr/local/bin/wormstar-entrypoint
+COPY server/apt-track.sh /usr/local/bin/wormstar-apt-track
+COPY server/apt-wrapper.sh /usr/local/bin/apt
+COPY server/apt-wrapper.sh /usr/local/bin/apt-get
+COPY server/persist-cli.sh /usr/local/bin/persist
 COPY web /app/web
 
 # Keep default Debian profile, then add visual Bash colors to interactive login shells.
 RUN printf '\n# Wormstar ANSI colors\n[ -r /usr/local/share/wormstar-kali-shell.sh ] && . /usr/local/share/wormstar-kali-shell.sh\n' >> /home/tuser/.profile \
     && chown tuser:tuser /home/tuser/.profile
 
-RUN chown -R tuser:tuser /app
-USER tuser
-ENV HOME=/home/tuser
-WORKDIR /home/tuser
-
+# The image's manual package baseline must be saved BEFORE runtime packages.
+RUN mkdir -p /persist /usr/local/share \
+    && chmod +x /usr/local/bin/wormstar-entrypoint /usr/local/bin/wormstar-apt-track \
+       /usr/local/bin/apt /usr/local/bin/apt-get /usr/local/bin/persist \
+    && apt-mark showmanual | LC_ALL=C sort -u > /usr/local/share/wormstar-manual-base.txt \
+    && printf 'DPkg::Post-Invoke { "/usr/local/bin/wormstar-apt-track || true"; };\n' > /etc/apt/apt.conf.d/98wormstar-persist \
+    && chown -R tuser:tuser /app
+# Only the volume/bootstrap runs as root. Entrypoint drops server + Bash to tuser.
+USER root
+ENV HOME=/home/tuser WORMSTAR_PERSIST_ROOT=/persist
+WORKDIR /app/server
 EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/wormstar-entrypoint"]
 CMD ["node", "/app/server/index.js"]

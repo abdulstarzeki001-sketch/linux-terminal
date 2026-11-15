@@ -1,0 +1,44 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const {readFileSync}=require('node:fs');
+const {join}=require('node:path');
+const load=p=>readFileSync(join(__dirname,'..',p),'utf8');
+const docker=load('Dockerfile'),entry=load('server/entrypoint.sh');
+const tracker=load('server/apt-track.sh'),apt=load('server/apt-wrapper.sh');
+const cli=load('server/persist-cli.sh'),bash=load('server/kali-shell.sh');
+const compose=load('docker-compose.yml'),server=load('server/index.js');
+test('Railway volume maps to the original login HOME and preserves Bash authentication',()=>{
+  assert.match(docker,/ENTRYPOINT \["\/usr\/local\/bin\/wormstar-entrypoint"\]/);
+  assert.match(docker,/ENV HOME=\/home\/tuser WORMSTAR_PERSIST_ROOT=\/persist/);
+  assert.match(entry,/ROOT="\$\{WORMSTAR_PERSIST_ROOT:-\/persist\}"/);
+  assert.match(entry,/ln -s "\$HOME_DIR" "\$IMAGE_HOME"/);
+  assert.match(entry,/exec gosu tuser "\$@"/);
+  assert.match(entry,/RAILWAY_VOLUME_MOUNT_PATH/);
+  assert.match(compose,/wormstar_data:\/persist/);
+  assert.match(server,/pty\.spawn\('\/bin\/bash', \['-l'\]/);
+  assert.match(server,/TERMINAL_PASSWORD/);
+  assert.doesNotMatch(entry,/TERMINAL_PASSWORD/);
+});
+test('Debian APT inventory is tracked and reinstalled on a fresh image',()=>{
+  assert.match(docker,/apt-mark showmanual/);
+  assert.match(docker,/DPkg::Post-Invoke/);
+  assert.match(docker,/COPY server\/apt-wrapper\.sh \/usr\/local\/bin\/apt/);
+  assert.match(tracker,/comm -13 "\$BASE"/);
+  assert.match(tracker,/apt-manual\.txt/);
+  assert.match(tracker,/WORMSTAR_BOOTSTRAP/);
+  assert.match(entry,/dpkg-query -W/);
+  assert.match(entry,/apt-get install -y --no-install-recommends/);
+  assert.match(apt,/auto-upgrade-enabled/);
+  assert.match(entry,/apt-get upgrade -y/);
+  assert.match(cli,/auto-upgrade/);
+  assert.doesNotMatch(entry,/rm -rf "\$ROOT"/);
+});
+test('Python virtualenv, npm global tools and history are kept under persistent home',()=>{
+  assert.match(entry,/python3 -m venv "\$IMAGE_HOME\/\.venv"/);
+  assert.match(bash,/HISTFILE="\$HOME\/\.bash_history"/);
+  assert.match(bash,/history -a/);
+  assert.match(bash,/NPM_CONFIG_PREFIX="\$HOME\/\.npm-global"/);
+  assert.match(bash,/\.venv\/bin/);
+  assert.match(cli,/Persistent home/);
+});

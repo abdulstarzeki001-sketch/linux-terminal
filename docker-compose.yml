@@ -3,6 +3,8 @@ services:
     build: .
     image: linux-terminal:latest
     env_file: .env
+    volumes:
+      - wormstar_data:/persist
     ports:
       # Bound to localhost only. Put a reverse proxy with HTTPS in front of it before exposing it.
       - "127.0.0.1:8080:8080"
@@ -13,3 +15,6 @@ services:
     tmpfs:
       - /tmp:size=256m
     restart: "no"
+
+volumes:
+  wormstar_data:
