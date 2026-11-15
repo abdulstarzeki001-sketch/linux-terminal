@@ -135,3 +135,62 @@ test('production Docker image includes every required AI module, and gateway rem
   assert.match(gatewayDocker,/COPY ai-gateway\/index\.js ai-gateway\/provider\.js/);
   assert.doesNotMatch(gatewayDocker,/COPY server\/index\.js|TERMINAL_PASSWORD/);
 });
+
+
+test('authenticated AI connection probe checks only private gateway health',async()=>{
+  let observedURL='',options;
+  const result=await client.checkAIStatus({env:terminalEnv,fetchFn:async(url,opts)=>{
+    observedURL=url;options=opts;return {ok:true,json:async()=>({ok:true,aiConfigured:true})};
+  }});
+  assert.equal(observedURL,'http://star-ai-gateway.railway.internal:8081/health');
+  assert.equal(options.method,'GET');
+  assert.equal(options.headers,undefined);
+  assert.deepEqual(result,{ready:true,reason:'GATEWAY_READY'});
+  assert.deepEqual(await client.checkAIStatus({env:{}}),{
+    ready:false,reason:'TERMINAL_NOT_CONFIGURED'
+  });
+  assert.deepEqual(await client.checkAIStatus({env:terminalEnv,fetchFn:async()=>({
+    ok:true,json:async()=>({ok:true,aiConfigured:false})
+  })}),{ready:false,reason:'GATEWAY_NOT_CONFIGURED'});
+  assert.deepEqual(await client.checkAIStatus({env:terminalEnv,fetchFn:async()=>{throw Error('offline')}}),{
+    ready:false,reason:'GATEWAY_UNREACHABLE'
+  });
+});
+
+test('gateway token mismatches are distinct from OpenAI account failures',async()=>{
+  await assert.rejects(client.askAI('hello',{env:terminalEnv,fetchFn:async()=>({
+    ok:false,status:401,json:async()=>({error:'Unauthorized'})
+  })}),/AI_GATEWAY_AUTH_FAILED/);
+  for(const code of ['AI_AUTH_FAILED','AI_QUOTA_EXCEEDED','AI_MODEL_ERROR']){
+    await assert.rejects(client.askAI('hello',{env:terminalEnv,fetchFn:async()=>({
+      ok:false,status:503,json:async()=>({error:code})
+    })}),new RegExp(code));
+  }
+});
+
+test('provider maps invalid key, quota, model and provider rate limits to safe codes',async()=>{
+  const env={...aiEnv,AI_ENABLED:'1'};
+  for(const [status,providerCode,expected] of [
+    [401,'invalid_api_key','AI_AUTH_FAILED'],
+    [429,'insufficient_quota','AI_QUOTA_EXCEEDED'],
+    [429,'rate_limit_exceeded','AI_RATE_LIMIT'],
+    [404,'model_not_found','AI_MODEL_ERROR'],
+    [400,'invalid_request_error','AI_MODEL_ERROR']
+  ]){
+    await assert.rejects(provider.askAI('hello',{env,fetchFn:async()=>({
+      ok:false,status,json:async()=>({error:{code:providerCode}})
+    })}),new RegExp(expected));
+  }
+});
+
+test('AI check remains behind terminal login and cannot expose provider API keys',()=>{
+  const server=readFileSync(join(__dirname,'..','server','index.js'),'utf8');
+  const frontend=readFileSync(join(__dirname,'..','web','app.js'),'utf8');
+  const html=readFileSync(join(__dirname,'..','web','index.html'),'utf8');
+  assert.ok(server.indexOf("if(msg.type==='ai_check')")>server.indexOf("if (!term) return;"));
+  assert.match(server,/type:'ai_status'/);
+  assert.match(html,/id="aiCheck"/);
+  assert.match(frontend,/type:'ai_check'/);
+  assert.match(frontend,/GATEWAY_UNREACHABLE/);
+  assert.doesNotMatch(frontend,/AI_GATEWAY_TOKEN|AI_API_KEY/);
+});

@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const express = require('express');
 const { WebSocketServer } = require('ws');
 const pty = require('node-pty');
-const {isConfigured,askAI,MAX_PROMPT} = require('./ai');
+const {isConfigured,checkAIStatus,askAI,MAX_PROMPT} = require('./ai');
 
 const PORT = Number(process.env.PORT || 8080);
 const PASSWORD = process.env.TERMINAL_PASSWORD || '';
@@ -101,7 +101,18 @@ wss.on('connection', (ws) => {
 
     resetIdle();
     send(ws, { type: 'ready', aiEnabled:isConfigured() });
+    void reportAIStatus();
   };
+
+  // Only send private gateway readiness to clients already authenticated.
+  function reportAIStatus(){
+    return checkAIStatus().then(result=>{
+      if(authed&&ws.readyState===ws.OPEN)send(ws,{type:'ai_status',...result});
+    }).catch(()=>{
+      if(authed&&ws.readyState===ws.OPEN)
+        send(ws,{type:'ai_status',ready:false,reason:'GATEWAY_UNREACHABLE'});
+    });
+  }
 
   ws.on('message', (raw) => {
     let msg;
@@ -126,6 +137,10 @@ wss.on('connection', (ws) => {
 
     if (!term) return;
 
+    if(msg.type==='ai_check'){
+      void reportAIStatus();
+      return;
+    }
     // AI access is available ONLY to the already-authenticated shell session.
     // All AI requests are advisory: they never write anything to the PTY.
     if (msg.type === 'ai_chat') {
@@ -158,14 +173,20 @@ wss.on('connection', (ws) => {
       }).catch(error=>{
         const messages={
           AI_NOT_CONFIGURED:'المساعد غير مهيأ.',
-          AI_AUTH_FAILED:'مفتاح AI غير صالح أو ليس لديه صلاحية لهذا النموذج.',
-          AI_RATE_LIMIT:'وصل مزود AI إلى حد الطلبات أو الرصيد.',
-          AI_TIMEOUT:'انتهت مهلة اتصال AI.',
-          AI_UPSTREAM_UNAVAILABLE:'خدمة AI غير متاحة أو النموذج غير صحيح.',
+          AI_AUTH_FAILED:'مفتاح OpenAI API غير صالح أو لا يملك الصلاحية المطلوبة. راجع AI_API_KEY بخدمة Gateway.',
+          AI_GATEWAY_AUTH_FAILED:'رمز الربط AI_GATEWAY_TOKEN غير متطابق بين Terminal وGateway.',
+          AI_RATE_LIMIT:'تم تجاوز معدل الطلبات المسموح. حاول لاحقاً.',
+          AI_QUOTA_EXCEEDED:'رصيد OpenAI API غير كافٍ أو الحصة انتهت. راجع Billing وUsage.',
+          AI_BILLING_REQUIRED:'تحتاج إلى إعداد الفوترة أو رصيد API.',
+          AI_MODEL_ERROR:'اسم AI_MODEL غير صالح، أو النموذج غير متاح للمفتاح، أو إعداد الطلب غير مدعوم.',
+          AI_TIMEOUT:'انتهت مهلة الاتصال بمزود الذكاء الاصطناعي.',
+          AI_UPSTREAM_UNAVAILABLE:'OpenAI أو Gateway غير متاح الآن؛ راجع سجلات Railway.',
           AI_EMPTY_RESPONSE:'لم يرجع النموذج نصاً.',
           AI_INVALID_INPUT:'السؤال غير صالح.'
         };
-        send(ws,{type:'ai_error',message:messages[error?.message]||'تعذر الاتصال بمزود AI.'});
+        const code=/^AI_[A-Z_]+$/.test(error?.message||'')?error.message:'AI_NETWORK_ERROR';
+        console.warn('[STAR AI terminal] Request failed:',code);
+        send(ws,{type:'ai_error',message:messages[code]||'فشل اتصال AI. راجع خدمة Gateway على Railway.'});
       }).finally(()=>{aiPending=false;aiAbort=null;});
       return;
     }

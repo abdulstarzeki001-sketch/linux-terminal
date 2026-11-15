@@ -32,6 +32,7 @@ function createGateway({env=process.env,fetchFn=globalThis.fetch}={}) {
     if(req.url!=='/answer'){json(res,404,{error:'Not found'});return;}
     if(req.method!=='POST'){json(res,405,{error:'Method not allowed'});return;}
     if(!keyMatches(req.headers['x-star-ai-token'],env.AI_GATEWAY_TOKEN)){
+      console.warn('[STAR AI] Private gateway token rejected (no credential details logged).');
       json(res,401,{error:'Unauthorized'});return;
     }
     if(!isConfigured(env)){json(res,503,{error:'AI_NOT_CONFIGURED'});return;}
@@ -64,9 +65,13 @@ function createGateway({env=process.env,fetchFn=globalThis.fetch}={}) {
       }catch(error){
         const err=error?.message||'';
         const status=err==='AI_AUTH_FAILED'?503:
-          err==='AI_RATE_LIMIT'?429:err==='AI_INVALID_INPUT'?400:502;
-        if(!res.writableEnded&&!res.destroyed)
-          json(res,status,{error:/^AI_[A-Z_]+$/.test(err)?err:'AI_NETWORK_ERROR'});
+          (err==='AI_RATE_LIMIT'||err==='AI_QUOTA_EXCEEDED')?429:
+          (err==='AI_INVALID_INPUT'||err==='AI_MODEL_ERROR')?400:
+          err==='AI_BILLING_REQUIRED'?402:502;
+        const safeCode=/^AI_[A-Z_]+$/.test(err)?err:'AI_NETWORK_ERROR';
+        // Railway receives an error category only, never keys or prompt contents.
+        console.warn('[STAR AI] Provider failed:',safeCode,'gateway HTTP',status);
+        if(!res.writableEnded&&!res.destroyed)json(res,status,{error:safeCode});
       }finally{inFlight--;}
     }catch(_){
       if(!res.writableEnded&&!res.destroyed)

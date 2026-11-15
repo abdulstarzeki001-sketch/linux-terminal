@@ -18,6 +18,26 @@ function isConfigured(env=process.env) {
   }catch(_){return false}
 }
 
+// Check only the internal Railway gateway after authenticated WebSocket login.
+// No provider key, user prompt, or shared secret is sent to this GET endpoint.
+// Provider key/credit validity requires a real AI request, not this health probe.
+async function checkAIStatus({env=process.env,fetchFn=globalThis.fetch}={}) {
+  if(!isConfigured(env))return {ready:false,reason:'TERMINAL_NOT_CONFIGURED'};
+  const url=new URL(env.AI_GATEWAY_URL);
+  url.pathname='/health';
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),4000);
+  try {
+    const res=await fetchFn(url.toString(),{method:'GET',signal:controller.signal,redirect:'error'});
+    if(!res.ok)return {ready:false,reason:'GATEWAY_ERROR'};
+    const data=await res.json();
+    if(data?.ok!==true)return {ready:false,reason:'GATEWAY_ERROR'};
+    if(data?.aiConfigured!==true)return {ready:false,reason:'GATEWAY_NOT_CONFIGURED'};
+    return {ready:true,reason:'GATEWAY_READY'};
+  }catch(_){return {ready:false,reason:'GATEWAY_UNREACHABLE'};}
+  finally{clearTimeout(timer);}
+}
+
 async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}) {
   if(!isConfigured(env))throw new Error('AI_NOT_CONFIGURED');
   if(typeof prompt!=='string'||!prompt.trim()||prompt.length>MAX_PROMPT)
@@ -36,7 +56,16 @@ async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}
       redirect:'error'
     });
     if(!res.ok){
-      if(res.status===401||res.status===403)throw new Error('AI_AUTH_FAILED');
+      // Only allow pre-defined error codes from the private gateway.
+      let code='';
+      try{const data=await res.json();if(typeof data?.error==='string')code=data.error;}catch(_){}
+      const safeCodes=new Set([
+        'AI_AUTH_FAILED','AI_RATE_LIMIT','AI_QUOTA_EXCEEDED',
+        'AI_MODEL_ERROR','AI_NOT_CONFIGURED','AI_TIMEOUT',
+        'AI_UPSTREAM_UNAVAILABLE','AI_EMPTY_RESPONSE','AI_BILLING_REQUIRED'
+      ]);
+      if(res.status===401||res.status===403)throw new Error('AI_GATEWAY_AUTH_FAILED');
+      if(safeCodes.has(code))throw new Error(code);
       if(res.status===429)throw new Error('AI_RATE_LIMIT');
       if(res.status===503)throw new Error('AI_NOT_CONFIGURED');
       throw new Error('AI_UPSTREAM_UNAVAILABLE');
@@ -54,4 +83,4 @@ async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}
     signal?.removeEventListener('abort',abort);
   }
 }
-module.exports={isConfigured,askAI,MAX_PROMPT};
+module.exports={isConfigured,checkAIStatus,askAI,MAX_PROMPT};

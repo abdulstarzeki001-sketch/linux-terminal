@@ -36,7 +36,9 @@
   const aiPrompt = $('aiPrompt');
   const aiSend = $('aiSend');
   const aiState = $('aiState');
+  const aiCheck = $('aiCheck');
   const aiMessages = $('aiMessages');
+  let aiStatusMessage = '';
   let aiEnabled = false;
   let aiBusy = false;
   let aiOpen = false;
@@ -120,9 +122,10 @@
     aiPrompt.disabled = !on || !aiEnabled || aiBusy;
     aiSend.disabled = !on || !aiEnabled || aiBusy;
     $('aiExplain').disabled = !on || !aiEnabled || aiBusy;
+    aiCheck.disabled = !on;
     aiState.textContent = !on ? 'Waiting for sign-in' :
-      !aiEnabled ? 'Not configured in Railway Variables' :
-      aiBusy ? 'Thinking…' : 'Connected · Advisory only';
+      aiBusy ? 'Thinking…' :
+      aiStatusMessage || (!aiEnabled ? 'AI settings disabled or incomplete' : 'Ready for your question');
     keysToggle.setAttribute('aria-expanded',String(Boolean(on && keysExpanded)));
     if (on && keysExpanded) extraKeys.classList.remove('hidden');
     else extraKeys.classList.add('hidden');
@@ -232,6 +235,7 @@
     screen.replaceChildren();
     terminalReady = false;
     aiEnabled=false;
+    aiStatusMessage='';
     aiBusy=false;
     aiOpen=false;
     aiPrompt.value='';
@@ -672,6 +676,7 @@
       if (message.type==='ready') {
         clearTimeout(authTimeout);
         aiEnabled=message.aiEnabled===true;
+        aiStatusMessage=aiEnabled ? 'Checking internal AI Gateway…' : 'Terminal AI settings disabled or incomplete';
         try {
           startTerminal();
           for (const line of buffer) {
@@ -694,6 +699,16 @@
             catch (_) {forceTextView=true;updateConsoleMode();}
           }
         } else if (buffer.join('').length < 16000) buffer.push(message.data);
+      } else if (message.type==='ai_status') {
+        const reasons={
+          TERMINAL_NOT_CONFIGURED:'Terminal AI settings disabled or incomplete',
+          GATEWAY_UNREACHABLE:'Gateway unreachable · check Railway internal network',
+          GATEWAY_NOT_CONFIGURED:'Gateway key/model/AI_ENABLED missing or invalid',
+          GATEWAY_ERROR:'Gateway returned an error during its health check',
+          GATEWAY_READY:'Gateway online · API key and credits not yet verified'
+        };
+        aiStatusMessage=reasons[message.reason]||'AI status unavailable';
+        setControls();
       } else if (message.type==='ai_busy') {
         aiBusy=true;
         setControls();
@@ -702,6 +717,7 @@
         const text=typeof message.text==='string' ? message.text :
           (typeof message.message==='string'?message.message:'Could not complete the request.');
         appendAIMessage(text,message.type==='ai_error'?'error':'bot');
+        aiStatusMessage=message.type==='ai_error' ? text.slice(0,250) : 'STAR AI responded successfully';
         setControls();
       } else if (message.type==='error') {
         const upstreamMessage = typeof message.message==='string'
@@ -971,6 +987,12 @@
     }catch(_){notify('Allow pasting in Safari or use the iPhone keyboard.');}
   });
   aiToggle.addEventListener('click',()=>toggleAI(!aiOpen));
+  aiCheck.addEventListener('click',()=>{
+    if(!terminalReady||!ws||ws.readyState!==WebSocket.OPEN)return;
+    aiStatusMessage='Checking internal AI Gateway…';
+    setControls();
+    send({type:'ai_check'});
+  });
   $('aiClose').addEventListener('click',()=>toggleAI(false));
   aiSend.addEventListener('click',sendAI);
   aiPrompt.addEventListener('keydown',event=>{

@@ -586,3 +586,23 @@ test('Neon Glass is default with colorized PTY and switching themes remains func
   assert.equal(h.get('editionLabel').textContent,'KALI NIGHT UI');
   assert.equal(h.prefs.get('wt_ui_theme_v3'),'kali');
 });
+
+
+test('AI readiness explains gateway configuration and checks after sign-in only',()=>{
+  const h=harness();
+  h.get('aiCheck').events.click();
+  const ws=h.connect();
+  assert.equal(h.get('aiCheck').disabled,true);
+  ws.open();ws.message({type:'ready',aiEnabled:true});
+  assert.equal(h.get('aiCheck').disabled,false);
+  const before=ws.sent.length;
+  h.get('aiCheck').events.click();
+  assert.equal(ws.sent.length,before+1);
+  assert.equal(ws.sent.at(-1).type,'ai_check');
+  ws.message({type:'ai_status',ready:false,reason:'GATEWAY_UNREACHABLE'});
+  assert.match(h.get('aiState').textContent,/Gateway unreachable/);
+  ws.message({type:'ai_status',ready:true,reason:'GATEWAY_READY'});
+  assert.match(h.get('aiState').textContent,/Gateway online/);
+  h.get('disconnect').events.click();
+  assert.equal(h.get('aiCheck').disabled,true);
+});

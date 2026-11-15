@@ -61,8 +61,22 @@ async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}
       redirect:'error'
     });
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) throw new Error('AI_AUTH_FAILED');
-      if (response.status === 429) throw new Error('AI_RATE_LIMIT');
+      // Inspect only provider error codes, never expose the raw account response.
+      let type='';
+      if([400,402,404,429].includes(response.status)){
+        try{
+          const payload=await response.json();
+          type=String(payload?.error?.code||payload?.error?.type||'').slice(0,100);
+        }catch(_){}
+      }
+      if(response.status===401||response.status===403)throw new Error('AI_AUTH_FAILED');
+      if(response.status===402)throw new Error('AI_BILLING_REQUIRED');
+      if(response.status===429){
+        if(/insufficient_quota|billing|exceeded_quota|quota_exceeded/i.test(type))
+          throw new Error('AI_QUOTA_EXCEEDED');
+        throw new Error('AI_RATE_LIMIT');
+      }
+      if(response.status===400||response.status===404)throw new Error('AI_MODEL_ERROR');
       throw new Error('AI_UPSTREAM_UNAVAILABLE');
     }
     const data = await response.json();
