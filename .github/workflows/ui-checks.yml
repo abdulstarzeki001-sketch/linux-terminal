@@ -44,6 +44,7 @@ jobs:
           bash -n server/persist-cli.sh
           node --check server/index.js
           node --check server/ai.js
+          node --check server/boot-audit.js
           node --check ai-gateway/index.js
           node --check ai-gateway/provider.js
       - name: Check return navigation and existing login

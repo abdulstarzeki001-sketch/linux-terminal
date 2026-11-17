@@ -34,6 +34,7 @@ RUN npm install --omit=dev
 
 COPY server/index.js ./
 COPY server/ai.js ./
+COPY server/boot-audit.js ./
 COPY server/kali-shell.sh /usr/local/share/wormstar-kali-shell.sh
 COPY server/run-with-kali.sh /app/server/run-with-kali.sh
 COPY server/star-kali.py /usr/local/bin/star-kali

@@ -214,4 +214,6 @@ server.listen(PORT, '0.0.0.0', () => {
       console.info('[STAR AI preflight]',status.reason);
     }).catch(()=>console.warn('[STAR AI preflight] GATEWAY_UNREACHABLE'));
   },5000).unref();
+  // Run safe read-only diagnostics and at most one real AI smoke query per volume.
+  setTimeout(()=>require('./boot-audit').startBootAudit(),12000).unref();
 });
