@@ -33,7 +33,7 @@ test('AI smoke performs one safe request with no response or secret in logs',asy
     assert.equal(count,1);
     assert.ok(!logs.join(' ').includes('SECRET-SIMULATED-ANSWER'));
     assert.ok(!logs.join(' ').includes('AI_GATEWAY_TOKEN'));
-    const marker=path.join(root,'.config','wormstar','ai-smoke-v3.attempted');
+    const marker=path.join(root,'.config','wormstar','ai-smoke-v4.attempted');
     assert.ok(fs.existsSync(marker));
   } finally { fs.rmSync(root,{recursive:true,force:true}); }
 });
