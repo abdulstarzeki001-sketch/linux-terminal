@@ -14,6 +14,17 @@ RUN useradd -m -s /bin/bash tuser \
     && echo "tuser ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/tuser \
     && chmod 0440 /etc/sudoers.d/tuser
 
+# Immutable audited KALI-OSINT-STAR source (never execute project checkout at runtime).
+# Keep API isolated on loopback inside the terminal container.
+ARG KALI_OSINT_STAR_REF=ab4e9cdcb5e07e6941eb04e392595a1c77a3c3b0
+RUN git init -q /opt/kali-osint-star \
+    && git -C /opt/kali-osint-star fetch -q --depth 1 \
+       https://github.com/abdulstarzeki001-sketch/KALI-OSINT-STAR.git "${KALI_OSINT_STAR_REF}" \
+    && git -C /opt/kali-osint-star checkout -q --detach FETCH_HEAD \
+    && python3 -m venv /opt/star-kali-venv \
+    && /opt/star-kali-venv/bin/python -m pip install --no-cache-dir \
+       -r /opt/kali-osint-star/services/api/requirements.txt
+
 WORKDIR /app/server
 COPY server/package.json ./
 # node-pty compiles against the Node headers already shipped in this image.
@@ -23,6 +34,8 @@ RUN npm install --omit=dev
 COPY server/index.js ./
 COPY server/ai.js ./
 COPY server/kali-shell.sh /usr/local/share/wormstar-kali-shell.sh
+COPY server/run-with-kali.sh /app/server/run-with-kali.sh
+COPY server/star-kali.py /usr/local/bin/star-kali
 COPY server/entrypoint.sh /usr/local/bin/wormstar-entrypoint
 COPY server/apt-track.sh /usr/local/bin/wormstar-apt-track
 COPY server/apt-wrapper.sh /usr/local/bin/apt
@@ -37,6 +50,7 @@ RUN printf '\n# Wormstar ANSI colors\n[ -r /usr/local/share/wormstar-kali-shell.
 # The image's manual package baseline must be saved BEFORE runtime packages.
 RUN mkdir -p /persist /usr/local/share \
     && chmod +x /usr/local/bin/wormstar-entrypoint /usr/local/bin/wormstar-apt-track \
+       /app/server/run-with-kali.sh /usr/local/bin/star-kali \
        /usr/local/bin/apt /usr/local/bin/apt-get /usr/local/bin/persist \
     && apt-mark showmanual | LC_ALL=C sort -u > /usr/local/share/wormstar-manual-base.txt \
     && printf 'DPkg::Post-Invoke { "/usr/local/bin/wormstar-apt-track || true"; };\n' > /etc/apt/apt.conf.d/98wormstar-persist \
@@ -47,4 +61,4 @@ ENV HOME=/home/tuser WORMSTAR_PERSIST_ROOT=/persist
 WORKDIR /app/server
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/wormstar-entrypoint"]
-CMD ["node", "/app/server/index.js"]
+CMD ["bash", "/app/server/run-with-kali.sh"]

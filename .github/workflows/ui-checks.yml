@@ -36,6 +36,8 @@ jobs:
         run: |
           node --check web/app.js
           bash -n server/kali-shell.sh
+          bash -n server/run-with-kali.sh
+          python3 -m py_compile server/star-kali.py
           bash -n server/entrypoint.sh
           bash -n server/apt-track.sh
           bash -n server/apt-wrapper.sh
@@ -48,3 +50,15 @@ jobs:
         run: node --test test/*.test.js
       - name: Build isolated AI gateway Docker image
         run: docker build -f ai-gateway/Dockerfile -t star-ai-gateway:ci .
+
+  kali-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned KALI OSINT STAR Railway terminal image
+        run: docker build --pull -t star-kali-terminal:ci .
+      - name: Verify bundled Python API and loopback client
+        run: |
+          docker run --rm --entrypoint /bin/bash star-kali-terminal:ci -lc 'PYTHONPATH=/opt/kali-osint-star/services/api /opt/star-kali-venv/bin/python -c "from app.main import app; print(app.version)"'
+          docker run --rm --entrypoint /usr/local/bin/star-kali star-kali-terminal:ci --help
