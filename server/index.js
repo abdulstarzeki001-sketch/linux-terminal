@@ -7,6 +7,7 @@ const express = require('express');
 const { WebSocketServer } = require('ws');
 const pty = require('node-pty');
 const {isConfigured,checkAIStatus,askAI,MAX_PROMPT} = require('./ai');
+const {authorizedOrigin} = require('./edge-guard');
 
 const PORT = Number(process.env.PORT || 8080);
 const PASSWORD = process.env.TERMINAL_PASSWORD || '';
@@ -14,6 +15,13 @@ const IDLE_MINUTES = Number(process.env.IDLE_MINUTES || 30);
 const MAX_SESSION_MINUTES = Number(process.env.MAX_SESSION_MINUTES || 120);
 const SHELL_HOME = process.env.TERMINAL_HOME || '/home/tuser';
 const MAX_AUTH_FAILURES = 3;
+const EDGE_ENFORCE = process.env.TERMINAL_EDGE_MODE === 'enforce';
+const EDGE_SECRET = process.env.TERMINAL_EDGE_ORIGIN_SECRET || '';
+if (EDGE_ENFORCE && EDGE_SECRET.length < 32) {
+  console.error('TERMINAL_EDGE_MODE=enforce requires a configured 32+ character server-side origin secret.');
+  process.exit(1);
+}
+const gate = (req) => !EDGE_ENFORCE || authorizedOrigin(req.headers['x-star-edge-origin'], EDGE_SECRET);
 
 if (PASSWORD.length < 12) {
   console.error('TERMINAL_PASSWORD must be set and be at least 12 characters long.');
@@ -47,11 +55,26 @@ function send(ws, payload) {
 
 const app = express();
 app.disable('x-powered-by');
-app.use(express.static(path.join(__dirname, '..', 'web')));
 app.get('/health', (_req, res) => res.json({ ok: true }));
+// All browser UI and WebSocket access must traverse the owner-gated Cloudflare Worker when enforced.
+app.use((req, res, next) => {
+  if (!gate(req)) return res.status(403).type('text/plain').send('Origin authentication required');
+  next();
+});
+app.use(express.static(path.join(__dirname, '..', 'web')));
 
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 64 * 1024 });
+const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
+server.on('upgrade', (req, socket, head) => {
+  let pathname;
+  try { pathname = new URL(req.url, 'http://localhost').pathname; }
+  catch (_) { pathname = ''; }
+  if (pathname !== '/ws' || !gate(req) || (EDGE_ENFORCE && req.headers.origin !== 'https://terminal-production-fb16bd35.up.railway.app')) {
+    socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+    return;
+  }
+  wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+});
 
 wss.on('connection', (ws) => {
   let authed = false;
