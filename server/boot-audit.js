@@ -63,7 +63,7 @@ async function runLiveCheck({
   const reason=/^[A-Z_]+$/.test(health?.reason||'') ? health.reason : 'GATEWAY_UNKNOWN';
   logger('[STAR BOOT AUDIT] AI_HEALTH='+reason);
   if (!health?.ready) return {state:'NOT_READY',reason};
-  const marker=path.join(root,'.config','wormstar','ai-smoke-v2.attempted');
+  const marker=path.join(root,'.config','wormstar','ai-smoke-v3.attempted');
   try {
     fsImpl.mkdirSync(path.dirname(marker),{recursive:true,mode:0o700});
     fsImpl.writeFileSync(marker,'One-time AI connectivity check requested. No prompt or answer stored.\n',
