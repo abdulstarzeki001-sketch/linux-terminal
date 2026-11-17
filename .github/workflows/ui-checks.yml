@@ -70,7 +70,7 @@ jobs:
               command -v "$tool" >/dev/null
               echo "OK: $tool present"
             done
-            nmap --version | head -n 1
-            tcpdump --version 2>&1 | head -n 1
-            tshark --version | head -n 1
+            nmap --version
+            tcpdump --version
+            tshark --version
           '
