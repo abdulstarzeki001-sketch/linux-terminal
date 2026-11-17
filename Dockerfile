@@ -2,10 +2,11 @@ FROM node:20-bookworm
 
 # Real Linux userland: shell tools, compilers, editors, package tools.
 # build-essential and python3 are needed to compile node-pty.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       python3 python3-pip python3-venv \
       build-essential git nano vim less curl wget ca-certificates gosu \
       sudo procps htop jq unzip zip openssh-client \
+      nmap tcpdump tshark whois dnsutils traceroute \
     && rm -rf /var/lib/apt/lists/*
 
 # Non-root user for the shell. sudo is enabled so commands like apt install work.

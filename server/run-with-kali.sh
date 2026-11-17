@@ -42,10 +42,19 @@ api_pid=$!
   for i in {1..20}; do
     if curl -fsS --max-time 2 http://127.0.0.1:8000/api/v1/health >/dev/null 2>&1; then
       echo "[STAR KALI] Local API health verified."
-      if [[ ! -f "$AUTH_DIR/bootstrap-inventory.done" ]]; then
+      # Refresh read-only inventory once for this image profile; never scan a network target.
+      if [[ ! -f "$AUTH_DIR/bootstrap-inventory-defensive-v1.done" ]]; then
+        echo "[STAR KALI] Verifying installed defensive tools..."
+        for tool in nmap tcpdump tshark whois dig traceroute; do
+          if command -v "$tool" >/dev/null 2>&1; then
+            echo "[STAR KALI] $tool: installed"
+          else
+            echo "[STAR KALI] $tool: missing"
+          fi
+        done
         if /usr/local/bin/star-kali inventory; then
-          touch "$AUTH_DIR/bootstrap-inventory.done"
-          echo "[STAR KALI] Approved local inventory completed."
+          touch "$AUTH_DIR/bootstrap-inventory-defensive-v1.done"
+          echo "[STAR KALI] Approved local tool inventory completed."
         else
           echo "[STAR KALI] Local inventory failed; remains available for manual retry." >&2
         fi

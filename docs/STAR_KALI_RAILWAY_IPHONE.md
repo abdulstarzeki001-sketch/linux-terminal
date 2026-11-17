@@ -11,7 +11,8 @@ This integration bundles the reviewed KALI-OSINT-STAR repository at a **fixed Gi
 - Persistent SQLite: `/home/tuser/.local/share/kali-osint-star/operations.sqlite`.
 - `STAR_LAB_CIDRS` is explicitly empty in the runner; **network target checks remain disabled** on Railway. Only approved local inventory and read-only metadata are exposed.
 - Existing STAR AI gateway is unchanged and must be authorized independently.
-- One-time safe local inventory is executed after API readiness; results and approvals are recorded in SQLite. GitHub CI must pass before merging.
+- A safe local inventory runs after API readiness once for each approved image profile; results and approvals are recorded in SQLite. GitHub CI must pass before merging.
+- Debian includes baseline defensive binaries: `nmap`, `tcpdump`, `tshark`, `whois`, `dig` (`dnsutils`) and `traceroute`; they are not invoked against network targets during deployment.
 
 ## iPhone usage
 
@@ -25,7 +26,7 @@ This integration bundles the reviewed KALI-OSINT-STAR repository at a **fixed Gi
    - `star-kali audit` to review the audit history.
 3. The command line is the only execution surface for these operations; the Cloudflare Pages Operations panel is **not** connected to this Railway container.
 
-**These are metadata/inventory tasks only.** This container is Debian, not Kali Linux; tools that do not exist in its PATH are reported as missing. No external target is scanned and no framework/C2 agent is launched.
+**STAR KALI API jobs are metadata/inventory tasks only.** The pre-installed diagnostic binaries can be run manually by the authenticated terminal operator, but the automated initialization makes **no network scans, packet captures, or third-party requests**. This is Debian, not a complete Kali Linux distribution. Do not test public or private network targets without authorization.
 
 ## Security constraints
 
@@ -39,7 +40,7 @@ This integration bundles the reviewed KALI-OSINT-STAR repository at a **fixed Gi
 ## Validation from connectors
 
 - GitHub CI runs existing Node/browser tests and builds the final terminal Dockerfile, then imports the pinned FastAPI Python application.
-- Railway build/deployment success + runtime logs show the actual image runs. Seek log entries `[STAR KALI] Local API health verified.` and `[STAR KALI] Approved local inventory completed.`.
+- Railway build/deployment success + runtime logs show the actual image runs. Seek log entries `[STAR KALI] Local API health verified.`, `[STAR KALI] nmap: installed`, and `[STAR KALI] Approved local tool inventory completed.`.
 - This is not a real iPhone signed-in end-to-end browser test. Do not claim that a remote terminal session was opened unless it was.
 
 ## Recovery / rollback

@@ -62,3 +62,15 @@ jobs:
         run: |
           docker run --rm --entrypoint /bin/bash star-kali-terminal:ci -lc 'PYTHONPATH=/opt/kali-osint-star/services/api /opt/star-kali-venv/bin/python -c "from app.main import app; print(app.version)"'
           docker run --rm --entrypoint /usr/local/bin/star-kali star-kali-terminal:ci --help
+      - name: Verify tools without probing any external hosts
+        run: |
+          docker run --rm --entrypoint /bin/bash star-kali-terminal:ci -lc '
+            set -euo pipefail
+            for tool in nmap tcpdump tshark whois dig traceroute; do
+              command -v "$tool" >/dev/null
+              echo "OK: $tool present"
+            done
+            nmap --version
+            tcpdump --version
+            tshark --version
+          '
