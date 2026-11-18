@@ -1,0 +1,8 @@
+time,destination,method,status
+10:00:00,telemetry.lab.invalid,GET,200
+10:00:17,updates.lab.invalid,GET,200
+10:01:00,telemetry.lab.invalid,GET,200
+10:01:51,updates.lab.invalid,GET,200
+10:02:00,telemetry.lab.invalid,GET,200
+10:03:00,telemetry.lab.invalid,GET,200
+10:04:09,updates.lab.invalid,GET,200
