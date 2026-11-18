@@ -40,6 +40,7 @@ COPY server/run-with-kali.sh /app/server/run-with-kali.sh
 COPY server/star-kali.py /usr/local/bin/star-kali
 COPY server/entrypoint.sh /usr/local/bin/wormstar-entrypoint
 COPY server/apt-track.sh /usr/local/bin/wormstar-apt-track
+COPY server/restore-packages.sh /usr/local/bin/wormstar-restore-packages
 COPY server/apt-wrapper.sh /usr/local/bin/apt
 COPY server/apt-wrapper.sh /usr/local/bin/apt-get
 COPY server/persist-cli.sh /usr/local/bin/persist
@@ -52,6 +53,7 @@ RUN printf '\n# Wormstar ANSI colors\n[ -r /usr/local/share/wormstar-kali-shell.
 # The image's manual package baseline must be saved BEFORE runtime packages.
 RUN mkdir -p /persist /usr/local/share \
     && chmod +x /usr/local/bin/wormstar-entrypoint /usr/local/bin/wormstar-apt-track \
+       /usr/local/bin/wormstar-restore-packages \
        /app/server/run-with-kali.sh /usr/local/bin/star-kali \
        /usr/local/bin/apt /usr/local/bin/apt-get /usr/local/bin/persist \
     && apt-mark showmanual | LC_ALL=C sort -u > /usr/local/share/wormstar-manual-base.txt \
