@@ -51,8 +51,8 @@ case "${1:-}" in
       exit 1
     fi
     free_kib="$(df -Pk "$DIR" | awk 'END{print $4+0}')"
-    if (( free_kib < 32 * 1024 )); then
-      echo "Railway volume has less than 32 MiB free. Snapshot refused." >&2
+    if (( free_kib < (bytes + 1023) / 1024 + 16 * 1024 )); then
+      echo "Insufficient Railway volume space for snapshot plus 16 MiB reserve." >&2
       exit 1
     fi
     name="star-home-$(date -u +%Y%m%dT%H%M%SZ)-$$.tgz"
@@ -62,7 +62,10 @@ case "${1:-}" in
       --exclude='*/.git' --exclude='*/node_modules' --exclude='*/.venv' \
       --exclude='*/.npm' --exclude='*/.cache' \
       --exclude='*/.env' --exclude='*/.env.*' --exclude='*/.npmrc' \
-      --exclude='*.pem' --exclude='*.key' --exclude='id_rsa*' --exclude='id_ed25519*' \
+      --exclude='*/.ssh' --exclude='*/.aws' --exclude='*/.secrets' \
+      --exclude='*credential*' --exclude='*password*' --exclude='*token*' \
+      --exclude='*.pem' --exclude='*.key' --exclude='*.p12' --exclude='*.pfx' \
+      --exclude='*.kdbx' --exclude='id_rsa*' --exclude='id_ed25519*' \
       -C "$ROOT" "${sources[@]}"
     tar -tzf "$temp" >/dev/null
     mv -n "$temp" "$DIR/$name"
