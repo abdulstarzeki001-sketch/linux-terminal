@@ -41,6 +41,7 @@ case "${1:-}" in
       home/tuser/.config/wormstar/npm-packages.json \
       home/tuser/.config/wormstar/training-progress.json \
       home/tuser/.config/wormstar/tools-activity.json \
+      home/tuser/.config/wormstar/managed-tools.json \
       state/apt-manual.txt
     do
       [[ -e "$ROOT/$item" ]] && sources+=("$item")
@@ -97,7 +98,7 @@ case "${1:-}" in
         echo "Unsafe archive member" >&2; exit 1;
       }
       case "$member" in
-        home/tuser/projects|home/tuser/projects/*|home/tuser/.profile|home/tuser/.bashrc|home/tuser/.config/wormstar/pip-packages.txt|home/tuser/.config/wormstar/npm-packages.json|home/tuser/.config/wormstar/training-progress.json|home/tuser/.config/wormstar/tools-activity.json|state/apt-manual.txt) ;;
+        home/tuser/projects|home/tuser/projects/*|home/tuser/.profile|home/tuser/.bashrc|home/tuser/.config/wormstar/pip-packages.txt|home/tuser/.config/wormstar/npm-packages.json|home/tuser/.config/wormstar/training-progress.json|home/tuser/.config/wormstar/tools-activity.json|home/tuser/.config/wormstar/managed-tools.json|state/apt-manual.txt) ;;
         *) echo "Unexpected archive path; refusing extraction" >&2; exit 1 ;;
       esac
     done < <(tar -tzf "$file")
