@@ -244,3 +244,57 @@ test('Kimi provider errors are sanitized and secrets stay in gateway',async()=>{
     ok:false,status:429,json:async()=>({error:{code:'insufficient_quota'}})
   })}),/AI_QUOTA_EXCEEDED/);
 });
+
+test('self-hosted OpenAI-compatible endpoint is opt-in, HTTPS and host-pinned',async()=>{
+  const env={
+    AI_ENABLED:'1',
+    AI_PROVIDER:'selfhosted',
+    AI_MODEL:'qwen35b',
+    AI_SELFHOST_URL:'https://inference.example.com/v1/chat/completions',
+    AI_SELFHOST_ALLOWED_HOST:'inference.example.com',
+    AI_SELFHOST_API_KEY:'local-private-bearer-token-not-an-openai-key',
+    AI_API_KEY:'DO_NOT_SEND_TO_CUSTOM_ENDPOINT',
+  };
+  assert.equal(provider.isConfigured(env),true);
+  assert.equal(provider.selectedProvider(env).name,'selfhosted');
+  const result=await provider.askAI('Explain grep',{env,fetchFn:async(url,init)=>{
+    assert.equal(url,env.AI_SELFHOST_URL);
+    assert.equal(init.headers.Authorization,'Bearer '+env.AI_SELFHOST_API_KEY);
+    assert.ok(!init.headers.Authorization.includes(env.AI_API_KEY));
+    assert.equal(init.redirect,'error');
+    const payload=JSON.parse(init.body);
+    assert.equal(payload.model,'qwen35b');
+    assert.equal(payload.messages[0].role,'system');
+    assert.deepEqual(payload.messages[1],{role:'user',content:'Explain grep'});
+    assert.equal(payload.stream,false);
+    assert.equal(Object.hasOwn(payload,'tools'),false);
+    assert.equal(Object.hasOwn(payload,'reasoning_effort'),false);
+    return {ok:true,json:async()=>({choices:[{message:{content:'grep searches text'}}]})};
+  }});
+  assert.equal(result,'grep searches text');
+
+  for(const wrong of [
+    {AI_SELFHOST_URL:'http://inference.example.com/v1/chat/completions'},
+    {AI_SELFHOST_URL:'https://evil.example.net/v1/chat/completions'},
+    {AI_SELFHOST_URL:'https://inference.example.com/other/path'},
+    {AI_SELFHOST_URL:'https://inference.example.com/v1/chat/completions?x=1'},
+    {AI_SELFHOST_URL:'https://user:pass@inference.example.com/v1/chat/completions'},
+    {AI_SELFHOST_URL:'https://127.0.0.1/v1/chat/completions',AI_SELFHOST_ALLOWED_HOST:'127.0.0.1'},
+    {AI_SELFHOST_URL:'https://metadata.google.internal/v1/chat/completions',AI_SELFHOST_ALLOWED_HOST:'metadata.google.internal'},
+    {AI_SELFHOST_API_KEY:''},
+  ]){
+    assert.equal(provider.isConfigured({...env,...wrong}),false,JSON.stringify(wrong));
+  }
+});
+
+test('selfhosted provider never uses remote endpoint when inactive or unapproved',async()=>{
+  const env={
+    AI_ENABLED:'0',AI_PROVIDER:'selfhosted',AI_MODEL:'qwen35b',
+    AI_SELFHOST_URL:'https://inference.example.com/v1/chat/completions',
+    AI_SELFHOST_ALLOWED_HOST:'inference.example.com',
+    AI_SELFHOST_API_KEY:'local-private-bearer-token-not-an-openai-key',
+  };
+  let requests=0;
+  await assert.rejects(provider.askAI('Hello',{env,fetchFn:async()=>{requests++;}}),/AI_NOT_CONFIGURED/);
+  assert.equal(requests,0);
+});
