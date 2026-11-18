@@ -56,6 +56,13 @@ jobs:
           node --check ai-gateway/provider.js
       - name: Check return navigation and existing login
         run: node --test test/*.test.js
+      - name: Verify self-hosted GPU Compose configuration (no GPU required)
+        run: |
+          docker compose -f deploy/selfhosted-gpu/compose.yml \
+            --env-file deploy/selfhosted-gpu/.env.example config --quiet
+          test -z "$(docker compose -f deploy/selfhosted-gpu/compose.yml \
+            --env-file deploy/selfhosted-gpu/.env.example config --format json | \
+            python3 -c 'import json,sys; d=json.load(sys.stdin); print("host port published" if d["services"]["inference"].get("ports") else "",end="")')"
       - name: Build isolated AI gateway Docker image
         run: docker build -f ai-gateway/Dockerfile -t star-ai-gateway:ci .
       - name: Verify AI gateway uses Node.js 24

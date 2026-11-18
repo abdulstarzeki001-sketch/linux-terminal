@@ -3,7 +3,7 @@
 // No OpenAI API keys are stored here or passed to the shell. Provider credentials
 // must live in an isolated Railway AI gateway service.
 const MAX_PROMPT=4000;
-const TIMEOUT_MS=28000;
+const TIMEOUT_MS=85000; // Accommodate owner-operated GPU cold-start and model inference.
 
 function isConfigured(env=process.env) {
   if(env.AI_ENABLED!=='1' || typeof env.AI_GATEWAY_TOKEN!=='string' ||

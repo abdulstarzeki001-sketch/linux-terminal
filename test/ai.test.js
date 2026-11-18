@@ -244,3 +244,103 @@ test('Kimi provider errors are sanitized and secrets stay in gateway',async()=>{
     ok:false,status:429,json:async()=>({error:{code:'insufficient_quota'}})
   })}),/AI_QUOTA_EXCEEDED/);
 });
+
+test('self-hosted OpenAI-compatible endpoint is opt-in, HTTPS and host-pinned',async()=>{
+  const env={
+    AI_ENABLED:'1',
+    AI_PROVIDER:'selfhosted',
+    AI_MODEL:'qwen35b',
+    AI_SELFHOST_URL:'https://inference.example.com/v1/chat/completions',
+    AI_SELFHOST_ALLOWED_HOST:'inference.example.com',
+    AI_SELFHOST_API_KEY:'local-private-bearer-token-not-an-openai-key',
+    AI_API_KEY:'DO_NOT_SEND_TO_CUSTOM_ENDPOINT',
+  };
+  assert.equal(provider.isConfigured(env),true);
+  assert.equal(provider.selectedProvider(env).name,'selfhosted');
+  const result=await provider.askAI('Explain grep',{env,fetchFn:async(url,init)=>{
+    assert.equal(url,env.AI_SELFHOST_URL);
+    assert.equal(init.headers.Authorization,'Bearer '+env.AI_SELFHOST_API_KEY);
+    assert.ok(!init.headers.Authorization.includes(env.AI_API_KEY));
+    assert.equal(init.redirect,'error');
+    const payload=JSON.parse(init.body);
+    assert.equal(payload.model,'qwen35b');
+    assert.equal(payload.messages[0].role,'system');
+    assert.deepEqual(payload.messages[1],{role:'user',content:'Explain grep'});
+    assert.equal(payload.stream,false);
+    assert.equal(Object.hasOwn(payload,'tools'),false);
+    assert.equal(Object.hasOwn(payload,'reasoning_effort'),false);
+    return {ok:true,json:async()=>({choices:[{message:{content:'grep searches text'}}]})};
+  }});
+  assert.equal(result,'grep searches text');
+
+  for(const wrong of [
+    {AI_SELFHOST_URL:'http://inference.example.com/v1/chat/completions'},
+    {AI_SELFHOST_URL:'https://evil.example.net/v1/chat/completions'},
+    {AI_SELFHOST_URL:'https://inference.example.com/other/path'},
+    {AI_SELFHOST_URL:'https://inference.example.com/v1/chat/completions?x=1'},
+    {AI_SELFHOST_URL:'https://user:pass@inference.example.com/v1/chat/completions'},
+    {AI_SELFHOST_URL:'https://127.0.0.1/v1/chat/completions',AI_SELFHOST_ALLOWED_HOST:'127.0.0.1'},
+    {AI_SELFHOST_URL:'https://metadata.google.internal/v1/chat/completions',AI_SELFHOST_ALLOWED_HOST:'metadata.google.internal'},
+    {AI_SELFHOST_API_KEY:''},
+  ]){
+    assert.equal(provider.isConfigured({...env,...wrong}),false,JSON.stringify(wrong));
+  }
+});
+
+test('selfhosted provider never uses remote endpoint when inactive or unapproved',async()=>{
+  const env={
+    AI_ENABLED:'0',AI_PROVIDER:'selfhosted',AI_MODEL:'qwen35b',
+    AI_SELFHOST_URL:'https://inference.example.com/v1/chat/completions',
+    AI_SELFHOST_ALLOWED_HOST:'inference.example.com',
+    AI_SELFHOST_API_KEY:'local-private-bearer-token-not-an-openai-key',
+  };
+  let requests=0;
+  await assert.rejects(provider.askAI('Hello',{env,fetchFn:async()=>{requests++;}}),/AI_NOT_CONFIGURED/);
+  assert.equal(requests,0);
+});
+
+test('Cloudflare Access service credentials are transmitted only to pinned self-hosted host',async()=>{
+  const env={
+    AI_ENABLED:'1',AI_PROVIDER:'selfhosted',AI_MODEL:'star-selfhost',
+    AI_SELFHOST_URL:'https://inference.example.com/v1/chat/completions',
+    AI_SELFHOST_ALLOWED_HOST:'inference.example.com',
+    AI_SELFHOST_API_KEY:'my-private-GPU-bearer-key-0123456789',
+    AI_SELFHOST_CF_CLIENT_ID:'123456789abcdef.access',
+    AI_SELFHOST_CF_CLIENT_SECRET:'12345678901234567890_access_secret',
+  };
+  assert.equal(provider.isConfigured(env),true);
+  let calls=0;
+  const result=await provider.askAI('Hello',{env,fetchFn:async(url,init)=>{
+    calls++;
+    assert.equal(url,env.AI_SELFHOST_URL);
+    assert.equal(init.headers['CF-Access-Client-Id'],env.AI_SELFHOST_CF_CLIENT_ID);
+    assert.equal(init.headers['CF-Access-Client-Secret'],env.AI_SELFHOST_CF_CLIENT_SECRET);
+    assert.equal(init.headers.Authorization,'Bearer '+env.AI_SELFHOST_API_KEY);
+    return {ok:true,json:async()=>({choices:[{message:{content:'Hello'}}]})};
+  }});
+  assert.equal(result,'Hello');
+  assert.equal(calls,1);
+
+  for(const broken of [
+    {...env,AI_SELFHOST_CF_CLIENT_SECRET:''},
+    {...env,AI_SELFHOST_CF_CLIENT_ID:''},
+    {...env,AI_SELFHOST_CF_CLIENT_ID:'x\r\nbad'},
+    {...env,AI_SELFHOST_CF_CLIENT_SECRET:'short'},
+  ]){
+    assert.equal(provider.isConfigured(broken),false);
+  }
+  assert.deepEqual(provider.accessHeaders({}),{});
+  const openAi={...aiEnv,AI_ENABLED:'1'};
+  const kimi={...aiEnv,AI_ENABLED:'1',AI_PROVIDER:'kimi',AI_MODEL:'kimi-k3.1-pro'};
+  for(const other of [openAi,kimi]){
+    await provider.askAI('Hello',{env:{...other,...{
+      AI_SELFHOST_CF_CLIENT_ID:env.AI_SELFHOST_CF_CLIENT_ID,
+      AI_SELFHOST_CF_CLIENT_SECRET:env.AI_SELFHOST_CF_CLIENT_SECRET,
+    }},fetchFn:async(url,init)=>{
+      assert.equal(init.headers['CF-Access-Client-Id'],undefined);
+      assert.equal(init.headers['CF-Access-Client-Secret'],undefined);
+      if(url===provider.AI_ENDPOINT)return {ok:true,json:async()=>({output_text:'yes'})};
+      return {ok:true,json:async()=>({choices:[{message:{content:'yes'}}]})};
+    }});
+  }
+});

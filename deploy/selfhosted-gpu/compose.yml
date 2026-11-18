@@ -1,0 +1,51 @@
+# STAR AI optional private GPU runtime.
+# Requires Docker Engine with NVIDIA Container Toolkit on an owner-controlled GPU host.
+# The inference service has NO published host ports; Cloudflare Tunnel proxies it
+# through a Cloudflare Access service-token policy, with vLLM bearer auth on /v1.
+services:
+  inference:
+    image: vllm/vllm-openai:v0.32.0-cu129-ubuntu2404
+    restart: unless-stopped
+    gpus: all
+    ipc: host
+    shm_size: "16gb"
+    command:
+      - --model
+      - ${HF_MODEL_ID:-Qwen/Qwen3.5-9B}
+      - --served-model-name
+      - ${AI_MODEL_NAME:-star-selfhost}
+      - --max-model-len
+      - "${MAX_MODEL_LEN:-4096}"
+      - --reasoning-parser
+      - qwen3
+      - --language-model-only
+      - --gpu-memory-utilization
+      - "0.85"
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+    environment:
+      VLLM_API_KEY: ${VLLM_API_KEY:?Set a strong vLLM bearer token in .env}
+      HF_HOME: /models
+    volumes:
+      - model-cache:/models
+    networks:
+      - model-net
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN:?Set a Cloudflare named tunnel token in .env}
+    depends_on:
+      - inference
+    networks:
+      - model-net
+
+volumes:
+  model-cache:
+networks:
+  model-net:
+    driver: bridge
