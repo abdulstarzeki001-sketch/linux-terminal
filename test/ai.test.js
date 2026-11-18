@@ -196,3 +196,51 @@ test('AI check remains behind terminal login and cannot expose provider API keys
   assert.match(frontend,/GATEWAY_UNREACHABLE/);
   assert.doesNotMatch(frontend,/AI_GATEWAY_TOKEN|AI_API_KEY/);
 });
+
+test('Kimi K3.1 Pro is opt-in and has a fixed official endpoint',async()=>{
+  const env={...aiEnv,AI_ENABLED:'1',AI_PROVIDER:'kimi',AI_MODEL:'kimi-k3.1-pro'};
+  assert.equal(provider.isConfigured(env),true);
+  assert.equal(provider.selectedProvider(env).url,'https://api.moonshot.ai/v1/chat/completions');
+  let calls=0;
+  const result=await provider.askAI('Explain ls',{env,fetchFn:async(url,init)=>{
+    calls++;
+    assert.equal(url,provider.KIMI_ENDPOINT);
+    assert.equal(init.headers.Authorization,'Bearer '+env.AI_API_KEY);
+    assert.equal(init.redirect,'error');
+    const body=JSON.parse(init.body);
+    assert.equal(body.model,'kimi-k3.1-pro');
+    assert.equal(body.reasoning_effort,'high');
+    assert.equal(body.max_tokens,1024);
+    assert.equal(body.messages[0].role,'system');
+    assert.deepEqual(body.messages[1],{role:'user',content:'Explain ls'});
+    assert.equal(Object.hasOwn(body,'tools'),false);
+    assert.equal(Object.hasOwn(body,'store'),false);
+    return {ok:true,json:async()=>({choices:[{message:{content:'Use ls safely'}}]})};
+  }});
+  assert.equal(result,'Use ls safely');
+  assert.equal(calls,1);
+});
+
+test('unknown provider, invalid Kimi model and arbitrary API URL are rejected',async()=>{
+  for(const env of [
+    {...aiEnv,AI_ENABLED:'1',AI_PROVIDER:'other'},
+    {...aiEnv,AI_ENABLED:'1',AI_PROVIDER:'kimi'},
+    {...aiEnv,AI_ENABLED:'1',AI_PROVIDER:'kimi',AI_MODEL:'mock-model'},
+    {...aiEnv,AI_ENABLED:'1',AI_PROVIDER:'https://evil.example'},
+  ]){
+    assert.equal(provider.isConfigured(env),false);
+    await assert.rejects(provider.askAI('hello',{env,fetchFn:async()=>{throw Error('should not fetch')}}),/AI_NOT_CONFIGURED/);
+  }
+  const highspeed={...aiEnv,AI_ENABLED:'1',AI_PROVIDER:'kimi',AI_MODEL:'kimi-k3.1-pro-highspeed'};
+  assert.equal(provider.isConfigured(highspeed),true);
+});
+
+test('Kimi provider errors are sanitized and secrets stay in gateway',async()=>{
+  const env={...aiEnv,AI_ENABLED:'1',AI_PROVIDER:'kimi',AI_MODEL:'kimi-k3.1-pro'};
+  await assert.rejects(provider.askAI('Hello',{env,fetchFn:async()=>({
+    ok:false,status:401,json:async()=>({error:{message:'secret key in request'}})
+  })}),/AI_AUTH_FAILED/);
+  await assert.rejects(provider.askAI('Hello',{env,fetchFn:async()=>({
+    ok:false,status:429,json:async()=>({error:{code:'insufficient_quota'}})
+  })}),/AI_QUOTA_EXCEEDED/);
+});

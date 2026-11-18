@@ -1,13 +1,13 @@
 'use strict';
 
-// STAR AI isolated provider adapter: no shell execution or direct terminal access.
-// Authentication is inherited from the existing password-protected WebSocket.
-// Credentials and model traffic stay on the Railway server.
-const AI_ENDPOINT = 'https://api.openai.com/v1/responses';
-const MAX_PROMPT = 4000;
-const MAX_REPLY = 8000;
-const TIMEOUT_MS = 25000;
-const INSTRUCTIONS = [
+// STAR AI private provider adapter. Only the isolated Railway gateway owns provider credentials.
+// This module cannot execute terminal commands or access the shell.
+const AI_ENDPOINT='https://api.openai.com/v1/responses';
+const KIMI_ENDPOINT='https://api.moonshot.ai/v1/chat/completions';
+const MAX_PROMPT=4000;
+const MAX_REPLY=8000;
+const TIMEOUT_MS=25000;
+const INSTRUCTIONS=[
   'You are STAR AI, an assistant for an interactive Linux Bash terminal.',
   'Reply in clear Iraqi Arabic unless the user requests another language.',
   'Explain commands, shell errors and safe troubleshooting accurately.',
@@ -18,52 +18,67 @@ const INSTRUCTIONS = [
   'Do not request passwords, API keys or private tokens.'
 ].join(' ');
 
-function isConfigured(env=process.env) {
-  return env.AI_ENABLED === '1' &&
-    typeof env.AI_API_KEY === 'string' && env.AI_API_KEY.length >= 16 &&
-    typeof env.AI_MODEL === 'string' && /^[A-Za-z0-9_.:-]{1,100}$/.test(env.AI_MODEL);
+function selectedProvider(env=process.env){
+  if (!env.AI_PROVIDER || env.AI_PROVIDER==='openai') return {name:'openai',url:AI_ENDPOINT};
+  if (env.AI_PROVIDER==='kimi') return {name:'kimi',url:KIMI_ENDPOINT};
+  return null; // Never allow arbitrary external URLs from environment variables.
 }
 
-function textFromResponse(payload) {
-  if (typeof payload?.output_text === 'string') return payload.output_text.slice(0,MAX_REPLY);
-  const text = (Array.isArray(payload?.output) ? payload.output : []).flatMap(item =>
-    Array.isArray(item?.content) ? item.content : []
-  ).filter(item=>item?.type === 'output_text' && typeof item.text === 'string')
-   .map(item=>item.text).join('\n');
-  return text.slice(0,MAX_REPLY);
+function isConfigured(env=process.env){
+  const provider=selectedProvider(env);
+  return !!provider && env.AI_ENABLED==='1' &&
+    typeof env.AI_API_KEY==='string' && env.AI_API_KEY.length>=16 &&
+    typeof env.AI_MODEL==='string' && /^[A-Za-z0-9_.:-]{1,100}$/.test(env.AI_MODEL) &&
+    (provider.name!=='kimi' || /^kimi-k3\.1-pro(?:-highspeed)?$/.test(env.AI_MODEL));
 }
 
-async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}) {
-  if (!isConfigured(env)) throw new Error('AI_NOT_CONFIGURED');
-  if (typeof prompt !== 'string' || !prompt.trim() || prompt.length > MAX_PROMPT)
+function textFromResponse(payload){
+  if(typeof payload?.output_text==='string')return payload.output_text.slice(0,MAX_REPLY);
+  return (Array.isArray(payload?.output)?payload.output:[]).flatMap(item=>
+    Array.isArray(item?.content)?item.content:[]
+  ).filter(item=>item?.type==='output_text'&&typeof item.text==='string')
+   .map(item=>item.text).join('\n').slice(0,MAX_REPLY);
+}
+
+function textFromKimiResponse(payload){
+  const content=payload?.choices?.[0]?.message?.content;
+  if(typeof content==='string')return content.slice(0,MAX_REPLY);
+  if(Array.isArray(content))return content
+    .filter(part=>part?.type==='text'&&typeof part.text==='string')
+    .map(part=>part.text).join('\n').slice(0,MAX_REPLY);
+  return '';
+}
+
+async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}){
+  if(!isConfigured(env))throw new Error('AI_NOT_CONFIGURED');
+  if(typeof prompt!=='string'||!prompt.trim()||prompt.length>MAX_PROMPT)
     throw new Error('AI_INVALID_INPUT');
 
-  const controller = new AbortController();
-  const abort = () => controller.abort();
-  if (signal?.aborted) controller.abort();
+  const provider=selectedProvider(env);
+  const controller=new AbortController();
+  const abort=()=>controller.abort();
+  if(signal?.aborted)controller.abort();
   signal?.addEventListener('abort',abort,{once:true});
-  const timeout = setTimeout(abort,TIMEOUT_MS);
-  try {
-    const response = await fetchFn(AI_ENDPOINT,{
+  const timeout=setTimeout(abort,TIMEOUT_MS);
+  try{
+    const body=provider.name==='kimi'
+      ? {model:env.AI_MODEL, messages:[
+          {role:'system',content:INSTRUCTIONS},
+          {role:'user',content:prompt}
+        ],reasoning_effort:'high',max_tokens:1024,stream:false}
+      : {model:env.AI_MODEL,instructions:INSTRUCTIONS,input:prompt,
+          store:false,max_output_tokens:650};
+    const response=await fetchFn(provider.url,{
       method:'POST',
-      headers:{
-        Authorization:'Bearer '+env.AI_API_KEY,
-        'Content-Type':'application/json'
-      },
-      body:JSON.stringify({
-        model:env.AI_MODEL,
-        instructions:INSTRUCTIONS,
-        input:prompt,
-        store:false,
-        max_output_tokens:650
-      }),
+      headers:{Authorization:'Bearer '+env.AI_API_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify(body),
       signal:controller.signal,
       redirect:'error'
     });
-    if (!response.ok) {
-      // Inspect only provider error codes, never expose the raw account response.
+    if(!response.ok){
+      // Never log or return the raw provider error body or request details.
       let type='';
-      if([400,402,404,429].includes(response.status)){
+      if([400,402,404,422,429].includes(response.status)){
         try{
           const payload=await response.json();
           type=String(payload?.error?.code||payload?.error?.type||'').slice(0,100);
@@ -76,21 +91,21 @@ async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}
           throw new Error('AI_QUOTA_EXCEEDED');
         throw new Error('AI_RATE_LIMIT');
       }
-      if(response.status===400||response.status===404)throw new Error('AI_MODEL_ERROR');
+      if([400,404,422].includes(response.status))throw new Error('AI_MODEL_ERROR');
       throw new Error('AI_UPSTREAM_UNAVAILABLE');
     }
-    const data = await response.json();
-    const output = textFromResponse(data);
-    if (!output.trim()) throw new Error('AI_EMPTY_RESPONSE');
-    return output;
-  } catch (error) {
-    if (controller.signal.aborted) throw new Error('AI_TIMEOUT');
-    if (/^AI_[A-Z_]+$/.test(error?.message||'')) throw error;
+    const data=await response.json();
+    const answer=provider.name==='kimi'?textFromKimiResponse(data):textFromResponse(data);
+    if(!answer.trim())throw new Error('AI_EMPTY_RESPONSE');
+    return answer;
+  }catch(error){
+    if(controller.signal.aborted)throw new Error('AI_TIMEOUT');
+    if(/^AI_[A-Z_]+$/.test(error?.message||''))throw error;
     throw new Error('AI_NETWORK_ERROR');
-  } finally {
+  }finally{
     clearTimeout(timeout);
     signal?.removeEventListener('abort',abort);
   }
 }
 
-module.exports={isConfigured,askAI,textFromResponse,MAX_PROMPT,AI_ENDPOINT};
+module.exports={isConfigured,askAI,textFromResponse,textFromKimiResponse,selectedProvider,MAX_PROMPT,AI_ENDPOINT,KIMI_ENDPOINT};

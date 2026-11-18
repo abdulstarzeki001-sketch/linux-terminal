@@ -282,14 +282,14 @@ wss.on('connection', (ws) => {
       }).catch(error=>{
         const messages={
           AI_NOT_CONFIGURED:'المساعد غير مهيأ.',
-          AI_AUTH_FAILED:'مفتاح OpenAI API غير صالح أو لا يملك الصلاحية المطلوبة. راجع AI_API_KEY بخدمة Gateway.',
+          AI_AUTH_FAILED:'مفتاح مزود الذكاء الاصطناعي غير صالح أو لا يملك الصلاحية. راجع AI_API_KEY في Gateway.',
           AI_GATEWAY_AUTH_FAILED:'رمز الربط AI_GATEWAY_TOKEN غير متطابق بين Terminal وGateway.',
           AI_RATE_LIMIT:'تم تجاوز معدل الطلبات المسموح. حاول لاحقاً.',
-          AI_QUOTA_EXCEEDED:'رصيد OpenAI API غير كافٍ أو الحصة انتهت. راجع Billing وUsage.',
+          AI_QUOTA_EXCEEDED:'رصيد مزود الذكاء الاصطناعي غير كافٍ أو انتهت الحصة. راجع الفوترة والاستخدام.',
           AI_BILLING_REQUIRED:'تحتاج إلى إعداد الفوترة أو رصيد API.',
           AI_MODEL_ERROR:'اسم AI_MODEL غير صالح، أو النموذج غير متاح للمفتاح، أو إعداد الطلب غير مدعوم.',
           AI_TIMEOUT:'انتهت مهلة الاتصال بمزود الذكاء الاصطناعي.',
-          AI_UPSTREAM_UNAVAILABLE:'OpenAI أو Gateway غير متاح الآن؛ راجع سجلات Railway.',
+          AI_UPSTREAM_UNAVAILABLE:'مزود الذكاء الاصطناعي أو Gateway غير متاح الآن؛ راجع سجلات Railway.',
           AI_EMPTY_RESPONSE:'لم يرجع النموذج نصاً.',
           AI_INVALID_INPUT:'السؤال غير صالح.'
         };
