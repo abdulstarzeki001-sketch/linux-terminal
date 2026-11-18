@@ -1,0 +1,7 @@
+id,source,destination,port,decision
+FW-001,workstation,training-api,443,allow
+FW-002,guest,dc01,389,deny
+FW-003,guest,training-api,443,allow
+FW-004,guest,db01,5432,deny
+FW-005,workstation,dc01,3389,deny
+FW-006,admin,dc01,3389,allow
