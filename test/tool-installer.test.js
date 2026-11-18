@@ -16,6 +16,13 @@ test('all 15 receive explicit install policy and no program is started',()=>{
  assert.equal(c.tools.find(t=>t.id==='netexec').install.policy,'manual_review');
  assert.equal(c.tools.find(t=>t.id==='certipy').install.policy,'owner_one_click');
  assert.equal(c.summary.automatedInstallsEnabled,true);
+ const compatible=getCatalog({root:'/this-path-does-not-exist',pythonVersion:'3.11.2',
+  snapshot:{tools:[{id:'certipy',installed:false},{id:'frida',installed:false}]}});
+ assert.equal(compatible.pythonVersion,'3.11.2');
+ assert.equal(compatible.tools.find(t=>t.id==='certipy').install.canInstall,false);
+ assert.equal(compatible.tools.find(t=>t.id==='certipy').install.blockedReason,'INSTALL_PYTHON_VERSION_UNSUPPORTED');
+ assert.equal(compatible.tools.find(t=>t.id==='frida').install.canInstall,true);
+
  assert.equal(Object.keys(PROFILES).length,15);
  assert.deepEqual([...c.summary.approvedTools].sort(),['aflpp','certipy','frida','impacket']);
  assert.ok(c.tools.every(t=>Array.isArray(t.install.requirements)&&t.install.requirements.length));
