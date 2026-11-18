@@ -12,7 +12,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
       libbz2-1.0 libffi8 libgdbm6 liblzma5 libncursesw6 libreadline8 libsqlite3-0 libssl3 libuuid1 zlib1g \
       build-essential git nano vim less curl wget ca-certificates gosu \
       sudo procps htop jq unzip zip openssh-client \
-      nmap tcpdump tshark whois dnsutils traceroute \
+      nmap tcpdump tshark whois dnsutils traceroute afl++ \
     && rm -rf /var/lib/apt/lists/*
 RUN ldconfig && /usr/local/bin/python3.12 -c "import ssl,sqlite3,bz2,lzma,ctypes,venv,ensurepip,sys; assert sys.version_info[:2] == (3, 12)"
 
@@ -27,6 +27,28 @@ RUN /usr/local/bin/python3.12 -m venv /opt/certipy-ad312 \
     && /opt/certipy-ad312/bin/python -c "import sys,importlib.metadata as m; assert sys.version_info[:2] == (3,12); assert m.version('certipy-ad') == '5.1.0'" \
     && test -x /opt/certipy-ad312/bin/certipy \
     && /opt/certipy-ad312/bin/certipy -h > /dev/null
+
+# Independently pinned and isolated CLI packages; no remote targets, scans,
+# device attach or privileged services are started during image build.
+RUN /usr/local/bin/python3.12 -m venv /opt/impacket312 \
+    && /opt/impacket312/bin/python -m pip install --isolated --no-input \
+         --no-cache-dir --disable-pip-version-check --only-binary=:all: \
+         "impacket==0.13.1" \
+    && /opt/impacket312/bin/python -c "import importlib.metadata as m; assert m.version('impacket') == '0.13.1'" \
+    && test -x /opt/impacket312/bin/lookupsid.py \
+    && ln -s lookupsid.py /opt/impacket312/bin/impacket-lookupsid \
+    && /opt/impacket312/bin/impacket-lookupsid -h > /dev/null
+RUN /usr/local/bin/python3.12 -m venv /opt/frida312 \
+    && /opt/frida312/bin/python -m pip install --isolated --no-input \
+         --no-cache-dir --disable-pip-version-check --only-binary=:all: \
+         "frida-tools==14.13.2" \
+    && /opt/frida312/bin/python -c "import importlib.metadata as m; assert m.version('frida-tools') == '14.13.2'" \
+    && test -x /opt/frida312/bin/frida \
+    && /opt/frida312/bin/frida --version > /dev/null
+# Debian signed APT package; only verify the binary. Do not fuzz any targets.
+RUN dpkg-query -W -f='${Status}' 'afl++' | grep -qx 'install ok installed' \
+    && test -x /usr/bin/afl-fuzz
+
 
 
 # Non-root user for the shell. sudo is enabled so commands like apt install work.
