@@ -46,9 +46,21 @@ function selectedProvider(env=process.env){
   return null;
 }
 
+function accessHeaders(env){
+  const id=env.AI_SELFHOST_CF_CLIENT_ID||'';
+  const secret=env.AI_SELFHOST_CF_CLIENT_SECRET||'';
+  if(!id&&!secret)return {};
+  // Both Cloudflare Access service-token fields must be supplied together.
+  if(typeof id!=='string'||typeof secret!=='string'||
+     id.length<8||id.length>256||secret.length<20||secret.length>256||
+     /[\r\n]/.test(id)||/[\r\n]/.test(secret))return null;
+  return {'CF-Access-Client-Id':id,'CF-Access-Client-Secret':secret};
+}
+
 function isConfigured(env=process.env){
   const provider=selectedProvider(env);
   if(!provider || env.AI_ENABLED!=='1')return false;
+  if(provider.name==='selfhosted' && accessHeaders(env)===null)return false;
   const key=provider.name==='selfhosted'?env.AI_SELFHOST_API_KEY:env.AI_API_KEY;
   return typeof key==='string' && key.length>=16 &&
     typeof env.AI_MODEL==='string' && /^[A-Za-z0-9_.:-]{1,100}$/.test(env.AI_MODEL) &&
@@ -93,7 +105,11 @@ async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}
           store:false,max_output_tokens:650};
     const response=await fetchFn(provider.url,{
       method:'POST',
-      headers:{Authorization:'Bearer '+(provider.name==='selfhosted'?env.AI_SELFHOST_API_KEY:env.AI_API_KEY),'Content-Type':'application/json'},
+      headers:{
+        Authorization:'Bearer '+(provider.name==='selfhosted'?env.AI_SELFHOST_API_KEY:env.AI_API_KEY),
+        'Content-Type':'application/json',
+        ...(provider.name==='selfhosted'?accessHeaders(env):{})
+      },
       body:JSON.stringify(body),
       signal:controller.signal,
       redirect:'error'
@@ -131,4 +147,4 @@ async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}
   }
 }
 
-module.exports={isConfigured,askAI,textFromResponse,textFromKimiResponse,selectedProvider,selfHostedEndpoint,MAX_PROMPT,AI_ENDPOINT,KIMI_ENDPOINT};
+module.exports={isConfigured,askAI,textFromResponse,textFromKimiResponse,selectedProvider,selfHostedEndpoint,accessHeaders,MAX_PROMPT,AI_ENDPOINT,KIMI_ENDPOINT};
