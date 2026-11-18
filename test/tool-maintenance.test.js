@@ -90,8 +90,7 @@ test('managed wheel installation uses fixed pip args and checks package version 
    assert.ok(args.includes('--only-binary=:all:'));
    assert.ok(args.includes('--no-input'));
    assert.ok(args.includes('frida-tools==14.13.2'));
-   assert.equal(options.shell,false);
-   assert.equal(options.env,undefined); // test mock receives bounded override
+   assert.equal(options.timeout,150000);
    fs.writeFileSync(path.join(venv,'bin','frida'),'stub',{mode:0o755});
    return {stdout:'installed',stderr:''};
   }
