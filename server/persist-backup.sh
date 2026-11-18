@@ -44,7 +44,7 @@ case "${1:-}" in
       [[ -e "$ROOT/$item" ]] && sources+=("$item")
     done
     (( ${#sources[@]} > 0 )) || { echo "No supported files for backup" >&2; exit 1; }
-    bytes="$(du -sBc "${sources[@]/#/$ROOT/}" 2>/dev/null | awk 'END{print $1+0}')"
+    bytes="$(du -sbc "${sources[@]/#/$ROOT/}" 2>/dev/null | awk 'END{print $1+0}')"
     # The above expansion works for paths without whitespace; all source names are fixed.
     if (( bytes > MAX_INPUT_MIB * 1024 * 1024 )); then
       echo "Selected files exceed ${MAX_INPUT_MIB} MiB. Store large repositories on GitHub first." >&2
