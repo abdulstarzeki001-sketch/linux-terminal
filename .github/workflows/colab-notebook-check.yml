@@ -1,0 +1,51 @@
+name: Validate STAR AI Colab GPU Notebook
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'colab/STAR_AI_Qwen35_GPU_Colab.ipynb'
+      - '.github/workflows/colab-notebook-check.yml'
+  pull_request:
+    paths:
+      - 'colab/STAR_AI_Qwen35_GPU_Colab.ipynb'
+      - '.github/workflows/colab-notebook-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-and-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify notebook JSON and Python syntax without a GPU
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import ast, json
+          from pathlib import Path
+
+          path = Path("colab/STAR_AI_Qwen35_GPU_Colab.ipynb")
+          nb = json.loads(path.read_text(encoding="utf-8"))
+          assert nb.get("nbformat") == 4
+          assert nb.get("metadata",{}).get("kernelspec",{}).get("name") == "python3"
+          cells = nb.get("cells",[])
+          assert sum(c["cell_type"] == "code" for c in cells) >= 5
+          code = ""
+          for i,c in enumerate(cells):
+              if c["cell_type"] != "code":
+                  continue
+              assert c.get("execution_count") is None, f"Execution count in cell {i}"
+              assert not c.get("outputs"), f"Notebook contains outputs in cell {i}"
+              src = "".join(c.get("source",[]))
+              ast.parse(src, filename=f"{path}:cell-{i}")
+              code += src + "\n"
+          assert '127.0.0.1:11434' in code
+          assert 'OLLAMA_HOST' in code
+          assert 'nvidia-smi' in code
+          for forbidden in ("ngrok", "cloudflared", "localtunnel", "0.0.0.0:11434"):
+              assert forbidden not in code, f"Unexpected external tunneling: {forbidden}"
+          print(f"Validated {len(cells)} notebook cells; all Python sources parse correctly.")
+          PY
