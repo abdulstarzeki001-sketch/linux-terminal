@@ -130,7 +130,9 @@ test('production Docker image includes every required AI module, and gateway rem
   const terminal=readFileSync(join(__dirname,'..','server','index.js'),'utf8');
   const gatewayDocker=readFileSync(join(__dirname,'..','ai-gateway','Dockerfile'),'utf8');
   assert.match(terminal,/require\('\.\/ai'\)/);
-  assert.match(docker,/COPY server\/index\.js \.\/\s*\nCOPY server\/ai\.js \.\//);
+  assert.match(docker,/COPY server\/index\.js \.\//);
+  assert.match(docker,/COPY server\/edge-guard\.js \.\//);
+  assert.match(docker,/COPY server\/ai\.js \.\//);
   assert.doesNotMatch(docker,/COPY ai-gateway\/provider\.js|ENV\s+AI_API_KEY=/);
   assert.match(gatewayDocker,/COPY ai-gateway\/index\.js ai-gateway\/provider\.js/);
   assert.doesNotMatch(gatewayDocker,/COPY server\/index\.js|TERMINAL_PASSWORD/);
