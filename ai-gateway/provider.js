@@ -4,6 +4,7 @@
 // This module cannot execute terminal commands or access the shell.
 const AI_ENDPOINT='https://api.openai.com/v1/responses';
 const KIMI_ENDPOINT='https://api.moonshot.ai/v1/chat/completions';
+const {isIP}=require('node:net');
 const MAX_PROMPT=4000;
 const MAX_REPLY=8000;
 const TIMEOUT_MS=25000;
@@ -18,16 +19,38 @@ const INSTRUCTIONS=[
   'Do not request passwords, API keys or private tokens.'
 ].join(' ');
 
+// Explicit server-owner configuration for a remote, authenticated OpenAI-compatible
+// inference server. HTTPS and an exact trusted hostname prevent arbitrary URLs.
+function selfHostedEndpoint(env){
+  const allowed=env.AI_SELFHOST_ALLOWED_HOST;
+  if(typeof allowed!=='string' ||
+     !/^[a-z0-9-]{1,63}(?:\.[a-z0-9-]{1,63})+$/i.test(allowed) ||
+     isIP(allowed) ||
+     /(?:^|\.)(?:localhost|local|internal|test|invalid)$/i.test(allowed))return null;
+  try{
+    const u=new URL(env.AI_SELFHOST_URL||'');
+    if(u.protocol!=='https:' || u.hostname.toLowerCase()!==allowed.toLowerCase() ||
+       (u.port && u.port!=='443') || u.username || u.password ||
+       u.search || u.hash || u.pathname!=='/v1/chat/completions')return null;
+    return u.toString();
+  }catch(_){return null;}
+}
+
 function selectedProvider(env=process.env){
   if (!env.AI_PROVIDER || env.AI_PROVIDER==='openai') return {name:'openai',url:AI_ENDPOINT};
   if (env.AI_PROVIDER==='kimi') return {name:'kimi',url:KIMI_ENDPOINT};
-  return null; // Never allow arbitrary external URLs from environment variables.
+  if (env.AI_PROVIDER==='selfhosted'){
+    const url=selfHostedEndpoint(env);
+    return url?{name:'selfhosted',url}:null;
+  }
+  return null;
 }
 
 function isConfigured(env=process.env){
   const provider=selectedProvider(env);
-  return !!provider && env.AI_ENABLED==='1' &&
-    typeof env.AI_API_KEY==='string' && env.AI_API_KEY.length>=16 &&
+  if(!provider || env.AI_ENABLED!=='1')return false;
+  const key=provider.name==='selfhosted'?env.AI_SELFHOST_API_KEY:env.AI_API_KEY;
+  return typeof key==='string' && key.length>=16 &&
     typeof env.AI_MODEL==='string' && /^[A-Za-z0-9_.:-]{1,100}$/.test(env.AI_MODEL) &&
     (provider.name!=='kimi' || /^kimi-k3\.1-pro(?:-highspeed)?$/.test(env.AI_MODEL));
 }
@@ -59,18 +82,18 @@ async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}
   const abort=()=>controller.abort();
   if(signal?.aborted)controller.abort();
   signal?.addEventListener('abort',abort,{once:true});
-  const timeout=setTimeout(abort,TIMEOUT_MS);
+  const timeout=setTimeout(abort,provider.name==='selfhosted'?75000:TIMEOUT_MS);
   try{
-    const body=provider.name==='kimi'
+    const body=provider.name!=='openai'
       ? {model:env.AI_MODEL, messages:[
           {role:'system',content:INSTRUCTIONS},
           {role:'user',content:prompt}
-        ],reasoning_effort:'high',max_tokens:1024,stream:false}
+        ],...(provider.name==='kimi'?{reasoning_effort:'high'}:{}),max_tokens:1024,stream:false}
       : {model:env.AI_MODEL,instructions:INSTRUCTIONS,input:prompt,
           store:false,max_output_tokens:650};
     const response=await fetchFn(provider.url,{
       method:'POST',
-      headers:{Authorization:'Bearer '+env.AI_API_KEY,'Content-Type':'application/json'},
+      headers:{Authorization:'Bearer '+(provider.name==='selfhosted'?env.AI_SELFHOST_API_KEY:env.AI_API_KEY),'Content-Type':'application/json'},
       body:JSON.stringify(body),
       signal:controller.signal,
       redirect:'error'
@@ -95,7 +118,7 @@ async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}
       throw new Error('AI_UPSTREAM_UNAVAILABLE');
     }
     const data=await response.json();
-    const answer=provider.name==='kimi'?textFromKimiResponse(data):textFromResponse(data);
+    const answer=provider.name==='openai'?textFromResponse(data):textFromKimiResponse(data);
     if(!answer.trim())throw new Error('AI_EMPTY_RESPONSE');
     return answer;
   }catch(error){
@@ -108,4 +131,4 @@ async function askAI(prompt,{env=process.env,fetchFn=globalThis.fetch,signal}={}
   }
 }
 
-module.exports={isConfigured,askAI,textFromResponse,textFromKimiResponse,selectedProvider,MAX_PROMPT,AI_ENDPOINT,KIMI_ENDPOINT};
+module.exports={isConfigured,askAI,textFromResponse,textFromKimiResponse,selectedProvider,selfHostedEndpoint,MAX_PROMPT,AI_ENDPOINT,KIMI_ENDPOINT};
