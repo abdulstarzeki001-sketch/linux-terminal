@@ -171,6 +171,17 @@ function verify({week,answers},state=readState(),save=writeState){
  if(typeof answers.a!=='string'||typeof answers.b!=='string'||
     answers.a.length>MAX_ANSWERS||answers.b.length>MAX_ANSWERS)
     return {httpStatus:400,code:'TRAINING_INVALID_ANSWERS'};
+ // The first week also requires a real, successful STAR KALI API health
+ // check on Railway. This executes one fixed local command; never user input.
+ if(week==='W01' && process.env.RAILWAY_PROJECT_ID){
+   const {spawnSync}=require('node:child_process');
+   const health=spawnSync('/usr/local/bin/star-kali',['health'],{
+     timeout:5000,maxBuffer:8192,encoding:'utf8',
+     env:{PATH:'/usr/local/bin:/usr/bin:/bin',HOME:'/home/tuser',LANG:'C.UTF-8'}
+   });
+   if(health.status!==0||health.error)
+     return {httpStatus:503,code:'TRAINING_RUNTIME_NOT_READY'};
+ }
  const expected=getExpected(week);
  const flags=[normalize(answers.a)===normalize(expected[0]),normalize(answers.b)===normalize(expected[1])];
  const today=new Date().toISOString().slice(0,10);
