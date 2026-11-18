@@ -123,3 +123,11 @@ This workflow uses the existing owner-gated Wormstar Cloudflare Worker. It does 
 The download is limited to the newest verified archive in `~/backups/`, capped at 80 MiB. Its SHA-256 checksum is checked by Railway before streaming. Cloudflare Access, the Wormstar owner token and the private Worker-origin credential protect the download. The endpoint returns no arbitrary directory or path listing and is intentionally unavailable without `TERMINAL_EDGE_MODE=enforce`.
 
 **Warning:** Filename filters exclude common secrets, but project source files may contain private material or hard-coded keys. Review `~/projects` before exporting. Never share an exported `.tgz` publicly. There is no background or automatic transfer to cloud storage.
+
+## November 2026 runtime security maintenance
+
+Node.js 20 became end-of-life on March 24, 2026. The terminal image and private AI gateway have been moved to `node:24-bookworm` and `node:24-bookworm-slim` (Node.js 24 LTS) instead. Native `node-pty` is rebuilt inside the Docker image, not copied from the old runtime.
+
+GitHub CI must compile the terminal image, load the bundled Python API, test both real WebSocket and persistent-volume restart behavior, and assert that both Docker images run Node.js major version 24 before merging. The persistent Railway volume is reused.
+
+User-installed npm global tools under `~/.npm-global` survive on the volume, but any native addons compiled for the old Node.js ABI may require `persist save` then `persist repair-user` to rebuild. Do not delete your persistent home or run a blind recursive reinstall.

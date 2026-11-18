@@ -1,4 +1,4 @@
-FROM node:20-bookworm
+FROM node:24-bookworm
 
 # Real Linux userland: shell tools, compilers, editors, package tools.
 # build-essential and python3 are needed to compile node-pty.

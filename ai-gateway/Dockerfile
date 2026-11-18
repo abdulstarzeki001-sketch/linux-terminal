@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim
+FROM node:24-bookworm-slim
 WORKDIR /app
 COPY ai-gateway/index.js ai-gateway/provider.js ./
 USER node
