@@ -4,6 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {TOOLS, snapshot} = require('./tool-ops');
+const {catalogState,PACKAGES}=require('./tool-install-runner');
 
 const PLANS = Object.freeze({
   certipy:{kind:'pip',package:'certipy-ad',command:'$HOME/.venv/bin/python -m pip install certipy-ad',compatibility:'Linux; isolated Python venv',risk:'medium'},
@@ -41,21 +42,27 @@ function verifyManifest(root=process.env.WORMSTAR_PERSIST_ROOT||'/persist'){
 function getCatalog(opts={}){
   const snap=opts.snapshot||snapshot();
   const persist=verifyManifest(opts.root);
+  const installs=catalogState(opts);
   return {
     mode:'inventory_and_owner_install_plans',
     checkedAt:new Date().toISOString(),
     persistence:persist,
+    jobs:installs.jobs,
+    busy:installs.busy,
+    summary:{total:snap.tools.length,installed:snap.tools.filter(x=>x.installed).length,
+     missing:snap.tools.filter(x=>!x.installed).length,
+     automatedInstallsEnabled:true,approvedTools:installs.approvedTools},
     tools:snap.tools.map(t=>{
       const plan=PLANS[t.id];
       return {...t,install:{
-        policy:plan?plan.kind==='manual'?'manual_review':'owner_terminal_approval':'separate_lab',
+        policy:plan?plan.kind==='manual'?'manual_review':Object.hasOwn(PACKAGES,t.id)?'owner_one_click':'owner_terminal_approval':'separate_lab',
         method:plan?.kind||'unsupported',
         package:plan?.package||null,
         command:plan?.command||null,
         compatibility:plan?.compatibility||LEGACY[t.id]||'Manual review required',
         requiresApproval:true,
-        executed:false,
-        installedByManager:false
+        executed:installs.jobs[t.id]?.status==='succeeded',
+        installedByManager:installs.jobs[t.id]?.status==='succeeded'
       }};
     })
   };
