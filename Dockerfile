@@ -53,6 +53,7 @@ COPY server/apt-wrapper.sh /usr/local/bin/apt-get
 COPY server/persist-cli.sh /usr/local/bin/persist
 COPY server/persist-backup.sh /usr/local/bin/wormstar-persist-backup
 COPY server/restore-user-tools.sh /usr/local/bin/wormstar-restore-user-tools
+COPY server/install-approved-afl.sh /usr/local/bin/wormstar-install-afl
 COPY web /app/web
 
 # Keep default Debian profile, then add visual Bash colors to interactive login shells.
@@ -61,7 +62,8 @@ RUN printf '\n# Wormstar ANSI colors\n[ -r /usr/local/share/wormstar-kali-shell.
 
 # The image's manual package baseline must be saved BEFORE runtime packages.
 RUN mkdir -p /persist /usr/local/share \
-    && chmod +x /usr/local/bin/wormstar-entrypoint /usr/local/bin/wormstar-apt-track \
+    && chmod +x /usr/local/bin/wormstar-install-afl \
+       /usr/local/bin/wormstar-entrypoint /usr/local/bin/wormstar-apt-track \
        /usr/local/bin/wormstar-restore-packages \
        /app/server/run-with-kali.sh /usr/local/bin/star-kali \
        /usr/local/bin/apt /usr/local/bin/apt-get /usr/local/bin/persist \
