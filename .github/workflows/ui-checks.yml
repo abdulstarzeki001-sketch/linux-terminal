@@ -44,6 +44,7 @@ jobs:
           bash -n server/persist-backup.sh
           bash -n server/restore-user-tools.sh
           bash -n test/persistence-redeploy.sh
+          bash -n test/training-http.sh
           bash -n server/apt-wrapper.sh
           bash -n server/persist-cli.sh
           node --check server/index.js
@@ -67,6 +68,8 @@ jobs:
         run: docker build --pull -t star-kali-terminal:ci .
       - name: Verify terminal uses Node.js 24
         run: docker run --rm --entrypoint node star-kali-terminal:ci -e 'if(process.versions.node.split(".")[0]!=="24")process.exit(1);console.log(process.version)'
+      - name: Exercise authenticated real HTTP grading and persistence
+        run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/training-http.sh
       - name: Verify bundled Python API and loopback client
         run: |
           docker run --rm --entrypoint /bin/bash star-kali-terminal:ci -lc 'PYTHONPATH=/opt/kali-osint-star/services/api /opt/star-kali-venv/bin/python -c "from app.main import app; print(app.version)"'
