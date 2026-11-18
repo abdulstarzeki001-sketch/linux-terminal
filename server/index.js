@@ -11,6 +11,7 @@ const {originGuardConfig,permitOriginRequest} = require('./edge-guard');
 const fs=require('node:fs');
 const {latestSnapshot,verifySnapshot}=require('./backup-export');
 const training=require('./training-engine');
+const toolOps=require('./tool-ops');
 
 const PORT = Number(process.env.PORT || 8080);
 const PASSWORD = process.env.TERMINAL_PASSWORD || '';
@@ -99,6 +100,33 @@ app.post('/api/training/verify',express.json({limit:'2kb',strict:true}), (req,re
     return res.status(httpStatus).set({'Cache-Control':'private, no-store',
       'X-Content-Type-Options':'nosniff'}).json(body);
   }catch(_){return res.status(503).json({code:'TRAINING_CHECK_UNAVAILABLE'});}
+});
+// Same isolated Railway container as the terminal; never execute arbitrary
+// user shell strings. The private Worker-origin gate above protects these APIs.
+const boundedToolsJSON=express.json({limit:'2kb',strict:true});
+app.post('/api/tools/catalog', (req,res)=>{
+ if(!EDGE.enforced)return res.status(503).json({code:'EDGE_GUARD_REQUIRED'});
+ try{
+   return res.set({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'})
+     .json({...toolOps.snapshot(),history:toolOps.readActivity().slice(-30).reverse()});
+ }catch(_){return res.status(503).json({code:'TOOLS_CATALOG_UNAVAILABLE'});}
+});
+app.post('/api/tools/run',boundedToolsJSON,async(req,res)=>{
+ if(!EDGE.enforced)return res.status(503).json({code:'EDGE_GUARD_REQUIRED'});
+ try{
+  const body=req.body||{};
+  const result=await toolOps.perform({tool_id:body.tool_id,action:body.action});
+  const {httpStatus,...data}=result;
+  return res.status(httpStatus).set({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}).json(data);
+ }catch(_){return res.status(503).json({code:'TOOLS_EXECUTION_UNAVAILABLE'});}
+});
+app.post('/api/tools/assistant',boundedToolsJSON,async(req,res)=>{
+ if(!EDGE.enforced)return res.status(503).json({code:'EDGE_GUARD_REQUIRED'});
+ try{
+  const result=await toolOps.assistant(req.body?.prompt);
+  const {httpStatus,...data}=result;
+  return res.status(httpStatus).set({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}).json(data);
+ }catch(_){return res.status(503).json({code:'TOOLS_ASSISTANT_UNAVAILABLE'});}
 });
 app.use(express.static(path.join(__dirname, '..', 'web')));
 
