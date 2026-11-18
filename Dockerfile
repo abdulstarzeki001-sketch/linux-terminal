@@ -37,6 +37,8 @@ COPY server/edge-guard.js ./
 COPY server/backup-export.js ./
 COPY server/training-engine.js ./
 COPY server/tool-ops.js ./
+COPY server/tool-maintenance.js ./
+COPY server/tool-diagnostics.js ./
 COPY server/training-fixtures ./training-fixtures
 COPY server/ai.js ./
 COPY server/boot-audit.js ./
