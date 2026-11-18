@@ -15,6 +15,7 @@ const PYTHON=path.join(HOME,'.venv/bin/python');
 const STATE_PATH=path.join(HOME,'.config/wormstar/owner-installs.json');
 const MIN_FREE_BYTES=250*1024*1024;
 const MAX_DURATION_MS=300000;
+const APT_DURATION_MS=750000;
 const PACKAGES=Object.freeze({
   certipy:'certipy-ad==5.1.0',
   impacket:'impacket==0.13.1',
@@ -142,7 +143,7 @@ function startInstall(input,opts={}){
  child.stdout?.on('data',append);child.stderr?.on('data',append);
  child.on('error',e=>{append('Installer launch failed: '+(e?.code||'UNKNOWN'));finish(null);});
  child.on('close',finish);
- timer=setTimeout(()=>{timedOut=true;try{child.kill('SIGKILL');}catch(_){finish(null);}},MAX_DURATION_MS);
+ timer=setTimeout(()=>{timedOut=true;try{child.kill('SIGKILL');}catch(_){finish(null);}},toolId===APT_TOOL?APT_DURATION_MS:MAX_DURATION_MS);
  timer.unref?.();
  return {httpStatus:202,job:{...job},freeBytes:env.freeBytes};
 }
