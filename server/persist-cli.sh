@@ -61,6 +61,7 @@ status(){
     echo "Replay Debian upgrades after redeploy: disabled"
   fi
   echo "Python packages: $HOME_DIR/.venv (on volume)"
+  echo "Certipy Python 3.12 environment: $HOME_DIR/.venv-py312 (on volume)"
   echo "Global npm packages: $HOME_DIR/.npm-global (on volume)"
   echo "Projects and settings: $HOME_DIR"
   if [[ -d "$ROOT" ]]; then
@@ -81,6 +82,12 @@ check(){
     echo "OK: persistent Python virtual environment"
   else
     echo "WARNING: Python virtualenv is missing or broken" >&2; failed=1
+  fi
+  if [[ -x "$HOME_DIR/.venv-py312/bin/python" ]] &&
+     "$HOME_DIR/.venv-py312/bin/python" -c 'import sys; assert sys.version_info[:2] == (3,12)' >/dev/null 2>&1; then
+    echo "OK: persistent Certipy Python 3.12 environment"
+  else
+    echo "WARNING: Python 3.12 Certipy virtualenv is missing or incompatible" >&2; failed=1
   fi
   if [[ -d "$HOME_DIR/.npm-global" ]]; then
     echo "OK: persistent npm global prefix"
