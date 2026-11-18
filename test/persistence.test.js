@@ -6,6 +6,7 @@ const {join}=require('node:path');
 const load=p=>readFileSync(join(__dirname,'..',p),'utf8');
 const docker=load('Dockerfile'),entry=load('server/entrypoint.sh');
 const tracker=load('server/apt-track.sh'),apt=load('server/apt-wrapper.sh');
+const restore=load('server/restore-packages.sh');
 const cli=load('server/persist-cli.sh'),bash=load('server/kali-shell.sh');
 const compose=load('docker-compose.yml'),server=load('server/index.js');
 test('Railway volume maps to the original login HOME and preserves Bash authentication',()=>{
@@ -27,10 +28,15 @@ test('Debian APT inventory is tracked and reinstalled on a fresh image',()=>{
   assert.match(tracker,/comm -13 "\$BASE"/);
   assert.match(tracker,/apt-manual\.txt/);
   assert.match(tracker,/WORMSTAR_BOOTSTRAP/);
-  assert.match(entry,/dpkg-query -W/);
-  assert.match(entry,/apt-get install -y --no-install-recommends/);
+  assert.match(entry,/wormstar-restore-packages/);
+  assert.match(docker,/COPY server\/restore-packages\.sh \/usr\/local\/bin\/wormstar-restore-packages/);
+  assert.match(restore,/dpkg-query -W/);
+  assert.match(restore,/apt-get install -y --no-install-recommends/);
   assert.match(apt,/auto-upgrade-enabled/);
-  assert.match(entry,/apt-get upgrade -y/);
+  assert.match(restore,/apt-get upgrade -y/);
+  assert.match(restore,/restore-status\.txt/);
+  assert.match(restore,/flock -w/);
+  assert.match(cli,/persist repair|repair\)/);
   assert.match(cli,/auto-upgrade/);
   assert.doesNotMatch(entry,/rm -rf "\$ROOT"/);
 });
