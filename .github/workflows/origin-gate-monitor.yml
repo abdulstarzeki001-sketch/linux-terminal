@@ -1,0 +1,80 @@
+name: STAR Terminal Origin Security Monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 5 * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/origin-gate-monitor.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  origin-gate:
+    name: Block direct Railway access
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify public Railway origin rejects browser access
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://terminal-production-fb16bd35.up.railway.app"
+          status="$(curl --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code}' "$BASE/")"
+          echo "Direct Railway UI request: HTTP $status"
+          if [[ "$status" != "403" ]]; then
+            echo "::error::The direct Railway UI is not locked down (expected HTTP 403)."
+            exit 1
+          fi
+
+      - name: Verify unauthorized direct WebSocket is blocked
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://terminal-production-fb16bd35.up.railway.app"
+          status="$(curl --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code}' \
+            -H 'Connection: Upgrade' \
+            -H 'Upgrade: websocket' \
+            -H 'Sec-WebSocket-Version: 13' \
+            -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' \
+            -H "Origin: $BASE" "$BASE/ws")"
+          echo "Direct Railway WebSocket upgrade: HTTP $status"
+          if [[ "$status" != "403" ]]; then
+            echo "::error::Direct WebSocket upgrade is not rejected with HTTP 403."
+            exit 1
+          fi
+
+      - name: Verify credential-free Railway health survives enforcement
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://terminal-production-fb16bd35.up.railway.app"
+          code="$(curl --silent --show-error --max-time 20 -o /tmp/railway-health.json \
+            --write-out '%{http_code}' "$BASE/health")"
+          echo "Railway health response: HTTP $code"
+          test "$code" = 200
+          node -e "if(require('/tmp/railway-health.json').ok!==true)process.exit(1)"
+
+      - name: Verify owner entrypoint requires Cloudflare Access
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://wormstar-ai-lab.abdulstarzeki001.workers.dev"
+          code="$(curl --silent --show-error --max-time 20 \
+            -D /tmp/access-headers -o /dev/null --write-out '%{http_code}' "$BASE/terminal/")"
+          echo "Anonymous owner portal response: HTTP $code"
+          test "$code" = 302
+          node - /tmp/access-headers <<'NODE'
+          const fs=require('node:fs');
+          const h=fs.readFileSync(process.argv[2],'utf8');
+          const location=h.match(/^location:\s*(.+)$/im)?.[1]?.trim()||'';
+          const url=new URL(location);
+          const valid=url.hostname.endsWith('.cloudflareaccess.com') ||
+            (url.hostname==='wormstar-ai-lab.abdulstarzeki001.workers.dev' &&
+             url.pathname.startsWith('/cdn-cgi/access/'));
+          if(!valid) process.exit(1);
+          console.log('Cloudflare Access challenge confirmed');
+          NODE
