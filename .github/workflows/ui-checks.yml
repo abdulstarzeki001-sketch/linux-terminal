@@ -40,6 +40,8 @@ jobs:
           python3 -m py_compile server/star-kali.py
           bash -n server/entrypoint.sh
           bash -n server/apt-track.sh
+          bash -n server/restore-packages.sh
+          bash -n test/persistence-redeploy.sh
           bash -n server/apt-wrapper.sh
           bash -n server/persist-cli.sh
           node --check server/index.js
@@ -54,7 +56,7 @@ jobs:
 
   kali-container:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Build pinned KALI OSINT STAR Railway terminal image
@@ -75,3 +77,5 @@ jobs:
             tcpdump --version
             tshark --version
           '
+      - name: Prove persisted files and APT packages survive container replacement
+        run: bash test/persistence-redeploy.sh star-kali-terminal:ci

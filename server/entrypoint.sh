@@ -39,41 +39,10 @@ if [[ ! -x "$HOME_DIR/.venv/bin/python" ]]; then
   fi
 fi
 
-manifest="$STATE/apt-manual.txt"
-upgrade_marker="$STATE/auto-upgrade-enabled"
-restore_log="$STATE/restore.log"
-touch "$restore_log"
-chmod 644 "$restore_log"
-missing=()
-if [[ -s "$manifest" ]]; then
-  while IFS= read -r pkg; do
-    [[ "$pkg" =~ ^[a-zA-Z0-9][a-zA-Z0-9+._:-]*$ ]] || continue
-    if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -qx 'install ok installed'; then
-      missing+=("$pkg")
-    fi
-  done < "$manifest"
-fi
-if (( ${#missing[@]} > 0 )) || [[ -f "$upgrade_marker" ]]; then
-  echo "$(date -u +%FT%TZ) Restoring ${#missing[@]} APT packages" >> "$restore_log"
-  export WORMSTAR_BOOTSTRAP=1 DEBIAN_FRONTEND=noninteractive
-  if /usr/bin/apt-get update -qq >> "$restore_log" 2>&1; then
-    if (( ${#missing[@]} > 0 )); then
-      if ! /usr/bin/apt-get install -y --no-install-recommends "${missing[@]}" >> "$restore_log" 2>&1; then
-        echo "Batch restoration failed; trying packages individually." >> "$restore_log"
-        for pkg in "${missing[@]}"; do
-          /usr/bin/apt-get install -y --no-install-recommends "$pkg" >> "$restore_log" 2>&1 ||
-            echo "WARNING: Could not restore $pkg" >> "$restore_log"
-        done
-      fi
-    fi
-    if [[ -f "$upgrade_marker" ]]; then
-      /usr/bin/apt-get upgrade -y >> "$restore_log" 2>&1 ||
-        echo "WARNING: OS upgrade failed; inspect $restore_log" >&2
-    fi
-  else
-    echo "WARNING: APT mirrors unreachable; skipping package restoration." >&2
-  fi
-  unset WORMSTAR_BOOTSTRAP DEBIAN_FRONTEND
+# The package manager is ephemeral, while its extra-package manifest is
+# persistent. Restoration is bounded; failure never hides the owner's files.
+if ! /usr/local/bin/wormstar-restore-packages; then
+  echo "[PERSIST] Package restoration incomplete; terminal will still start." >&2
 fi
 
 cd "$IMAGE_HOME"
