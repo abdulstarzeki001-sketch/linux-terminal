@@ -6,10 +6,10 @@ const path = require('node:path');
 const {TOOLS, snapshot} = require('./tool-ops');
 
 const PLANS = Object.freeze({
-  certipy:{kind:'pip',package:'certipy-ad',command:'python3 -m pip install certipy-ad',compatibility:'Linux; isolated Python venv',risk:'medium'},
-  impacket:{kind:'pip',package:'impacket',command:'python3 -m pip install impacket',compatibility:'Linux; isolated Python venv',risk:'medium'},
-  netexec:{kind:'apt',package:'netexec',command:'sudo apt-get install --no-install-recommends netexec',compatibility:'Kali package; verify distro repository before installing',risk:'medium'},
-  frida:{kind:'pip',package:'frida-tools',command:'python3 -m pip install frida-tools',compatibility:'Linux; isolated Python venv',risk:'medium'},
+  certipy:{kind:'pip',package:'certipy-ad',command:'$HOME/.venv/bin/python -m pip install certipy-ad',compatibility:'Linux; isolated Python venv',risk:'medium'},
+  impacket:{kind:'pip',package:'impacket',command:'$HOME/.venv/bin/python -m pip install impacket',compatibility:'Linux; isolated Python venv',risk:'medium'},
+  netexec:{kind:'manual',package:'netexec',command:null,compatibility:'Kali repository package; Railway image is Debian, verify approved isolated installation method',risk:'high'},
+  frida:{kind:'pip',package:'frida-tools',command:'$HOME/.venv/bin/python -m pip install frida-tools',compatibility:'Linux; isolated Python venv',risk:'medium'},
   aflpp:{kind:'apt',package:'afl++',command:'sudo apt-get install --no-install-recommends afl++',compatibility:'Debian/Kali supported package availability varies',risk:'medium'},
   ghidra:{kind:'manual',package:null,command:null,compatibility:'Needs JDK and headless or GUI architecture; separate image recommended',risk:'high'}
 });
