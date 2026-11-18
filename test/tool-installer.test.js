@@ -29,3 +29,10 @@ test('persistent APT inventory is read, filtered, and never interpreted as shell
   assert.match(s.restoration,/ready/);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+
+test('installer API remains behind the same Railway private origin guard',()=>{
+ const src=fs.readFileSync(path.join(__dirname,'..','server','index.js'),'utf8');
+ assert.match(src,/app\.post\('\/api\/tools\/install\/catalog'/);
+ assert.match(src,/if\(!EDGE\.enforced\)return res\.status\(503\)/);
+ assert.doesNotMatch(src,/app\.post\('\/api\/tools\/install\/run'/);
+});
