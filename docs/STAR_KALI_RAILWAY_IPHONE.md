@@ -83,13 +83,14 @@ persist repair-user   # ON DEMAND only: reinstall pinned user Python/npm package
 persist backup        # create local, private, size-limited .tgz with SHA-256
 persist backups       # list up to three snapshot archives on the volume
 persist verify        # validate latest SHA-256 and compressed-tar structure
+persist unpack        # extract to ~/restored/<snapshot-name>, no overwrite
 persist verify star-home-YYYYMMDDTHHMMSSZ-PID.tgz
 persist check         # check current apps, volume link and package restoration
 ```
 
 **Snapshot contents:** `~/projects`, a `.bashrc` and `.profile` when present, pip/npm package **metadata** and the tracked Debian APT package list. It omits Git metadata, `node_modules`, `.venv`, npm caches, `.env` files, `.npmrc`, obvious private keys and password files. It does not archive `~/.ssh`, STAR AI gateway API keys or user conversation data. Other sensitive content inside your project source files is not detectable reliably and may still be present, so review what you store in `~/projects`.
 
-**Snapshot constraints:** This command deliberately refuses more than three on-volume archives, data exceeding 80 MiB uncompressed, or a volume with less than 32 MiB free. Archives and SHA-256 files are private (0600). The CLI never deletes existing archives automatically. To verify your last archive: `persist verify`. There is **no automatic restoration of project files**, to avoid overwriting user work.
+**Snapshot constraints:** This command deliberately refuses more than three on-volume archives, data exceeding 80 MiB uncompressed, or a volume with less than 32 MiB free. Archives and SHA-256 files are private (0600). The CLI never deletes existing archives automatically. To verify your last archive: `persist verify`. There is **no automatic restoration of project files**, to avoid overwriting user work. `persist unpack` verifies the archive, rejects unexpected/absolute paths and extracts into a *new* `~/restored/` review folder; it never overwrites a live project.
 
 **Important:** A snapshot on `/persist/home/tuser/backups` is **not an independent offsite backup**. If Railway loses or deletes the volume, that snapshot is lost too. Export it from an authenticated terminal to your own offline storage, use Railway native backups where your plan offers them, or commit non-secret sources to private GitHub repositories. No bucket, cloud storage credentials, or additional recurring charges are provisioned by this change.
 
