@@ -12,6 +12,7 @@ const APPROVAL='I_APPROVE_RAILWAY_TOOL_INSTALL';
 const HOME='/home/tuser';
 const PERSIST_ROOT=process.env.WORMSTAR_PERSIST_ROOT||'/persist';
 const PYTHON=path.join(HOME,'.venv/bin/python');
+const CERTIPY_PYTHON=path.join(HOME,'.venv-py312/bin/python');
 const STATE_PATH=path.join(HOME,'.config/wormstar/owner-installs.json');
 const MIN_FREE_BYTES=250*1024*1024;
 const MAX_DURATION_MS=300000;
@@ -109,7 +110,7 @@ function startInstall(input,opts={}){
  if(Date.now()-lastStarted<2000&&!opts.noThrottle)
   return {httpStatus:429,code:'INSTALL_RATE_LIMIT'};
  let env;
- try{env=prerequisites(opts);}catch(_){return {httpStatus:503,code:'INSTALL_ENVIRONMENT_UNAVAILABLE'};}
+ try{env=prerequisites({...opts,python:toolId==='certipy'?(opts.certipyPython||CERTIPY_PYTHON):(opts.python||PYTHON)});}catch(_){return {httpStatus:503,code:'INSTALL_ENVIRONMENT_UNAVAILABLE'};}
  if(!env.ok)return {httpStatus:503,code:env.code,freeBytes:env.freeBytes};
  if(toolId==='certipy'){
   const pythonVersion=readPythonVersion(env.python,opts);
@@ -180,9 +181,9 @@ function startInstall(input,opts={}){
  return {httpStatus:202,job:{...job},freeBytes:env.freeBytes};
 }
 function catalogState(opts){
- const pyVersion=readPythonVersion(opts?.python||PYTHON,opts);
+ const pyVersion=readPythonVersion(opts?.certipyPython||CERTIPY_PYTHON,opts);
  return {jobs:readJobs(opts),busy:active!==null,
   pythonVersion:pyVersion,certipyPythonReady:supportsCertipyPython(pyVersion),
   autoInstallPolicy:'owner_approved_pinned_pip_or_fixed_apt',approvedTools:APPROVED_IDS};
 }
-module.exports={APPROVAL,PACKAGES,APT_TOOL,APPROVED_IDS,MIN_FREE_BYTES,MIN_ROOT_FREE_BYTES,readJobs,catalogState,startInstall,prerequisites,readPythonVersion,supportsCertipyPython};
+module.exports={APPROVAL,PACKAGES,APT_TOOL,APPROVED_IDS,MIN_FREE_BYTES,MIN_ROOT_FREE_BYTES,CERTIPY_PYTHON,readJobs,catalogState,startInstall,prerequisites,readPythonVersion,supportsCertipyPython};

@@ -102,7 +102,7 @@ test('Certipy 5.1.0 never runs on Python 3.11 even with owner approval',()=>{
  const home=path.join(root,'home','tuser');fs.mkdirSync(home,{recursive:true});
  let called=false;
  const opts={root,home,python:'/usr/bin/env',stateFile:path.join(home,'jobs.json'),
-   freeBytes:MIN_FREE_BYTES+1,pythonVersion:'3.11.2',
+   freeBytes:MIN_FREE_BYTES+1,pythonVersion:'3.11.2',certipyPython:'/usr/bin/env',
    spawnFn:()=>{called=true;throw Error('should not start');},noThrottle:true};
  try{
   assert.equal(supportsCertipyPython('3.11.2'),false);
@@ -133,4 +133,43 @@ test('pip exit 0 without a recognized executable is not a successful installatio
   assert.equal(job.exitCode,0);
   assert.match(job.output,/no executable was detected/);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+
+test('Certipy 3.12 uses separate persistent venv; legacy Python stays unchanged',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'star-certipy-py312-'));
+ const home=path.join(root,'home','tuser');
+ fs.mkdirSync(home,{recursive:true});
+ const stateFile=path.join(home,'jobs.json');
+ let invocation=null;
+ const spawnFn=(binary,args,options)=>{
+  invocation={binary,args,options};
+  const child=new EventEmitter();
+  child.stdout=new EventEmitter();child.stderr=new EventEmitter();
+  process.nextTick(()=>{child.stdout.emit('data','Certipy installed');child.emit('close',0);});
+  return child;
+ };
+ try {
+  const opts={root,home,python:'/definitely-not-used/legacy-python311',
+   certipyPython:'/usr/bin/env',pythonVersion:'3.12.16',
+   stateFile,freeBytes:MIN_FREE_BYTES+1,spawnFn,verifyFn:()=>true,noThrottle:true};
+  const result=startInstall({tool_id:'certipy',approval:APPROVAL},opts);
+  assert.equal(result.httpStatus,202);
+  assert.equal(invocation.binary,'/usr/bin/env');
+  assert.ok(invocation.args.includes('certipy-ad==5.1.0'));
+  assert.equal(invocation.options.shell,false);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(readJobs(opts).certipy.status,'succeeded');
+ }finally {fs.rmSync(root,{recursive:true,force:true});}
+});
+test('image builds Python 3.12 with separate persistent venv and bin discovery',()=>{
+ const docker=fs.readFileSync(path.join(__dirname,'..','Dockerfile'),'utf8');
+ const entry=fs.readFileSync(path.join(__dirname,'..','server','entrypoint.sh'),'utf8');
+ const ops=fs.readFileSync(path.join(__dirname,'..','server','tool-ops.js'),'utf8');
+ const runner=fs.readFileSync(path.join(__dirname,'..','server','tool-install-runner.js'),'utf8');
+ assert.match(docker,/FROM python:3\.12\.16-slim-bookworm AS python312/);
+ assert.match(docker,/COPY --from=python312 \/usr\/local\/bin\/python3\.12/);
+ assert.match(entry,/\.venv-py312/);
+ assert.match(entry,/gosu tuser \/usr\/local\/bin\/python3\.12 -m venv/);
+ assert.match(ops,/\/home\/tuser\/\.venv-py312\/bin/);
+ assert.match(runner,/CERTIPY_PYTHON=path\.join\(HOME,'\.venv-py312\/bin\/python'\)/);
 });

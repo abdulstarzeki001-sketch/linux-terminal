@@ -1,13 +1,20 @@
+FROM python:3.12.16-slim-bookworm AS python312
 FROM node:24-bookworm
+# The Python 3.12 runtime is separate from system Python 3.11.
+COPY --from=python312 /usr/local/bin/python3.12 /usr/local/bin/python3.12
+COPY --from=python312 /usr/local/lib/python3.12 /usr/local/lib/python3.12
+COPY --from=python312 /usr/local/lib/libpython3.12.so.1.0 /usr/local/lib/libpython3.12.so.1.0
 
 # Real Linux userland: shell tools, compilers, editors, package tools.
 # build-essential and python3 are needed to compile node-pty.
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       python3 python3-pip python3-venv \
+      libbz2-1.0 libffi8 libgdbm6 liblzma5 libncursesw6 libreadline8 libsqlite3-0 libssl3 libuuid1 zlib1g \
       build-essential git nano vim less curl wget ca-certificates gosu \
       sudo procps htop jq unzip zip openssh-client \
       nmap tcpdump tshark whois dnsutils traceroute \
     && rm -rf /var/lib/apt/lists/*
+RUN ldconfig && /usr/local/bin/python3.12 -c "import ssl,sqlite3,bz2,lzma,ctypes,venv,ensurepip,sys; assert sys.version_info[:2] == (3, 12)"
 
 # Non-root user for the shell. sudo is enabled so commands like apt install work.
 # Trade-off: sudo means root inside the container. The container is the isolation boundary.
