@@ -149,7 +149,7 @@ function writeState(state,file=STATE_PATH){
 function publicStatus(state=readState()){
  const weeks=LABS.map(lab=>{
    const r=state.weeks[lab.id]||{};
-   return {id:lab.id,verified:r.verifiedAt!==undefined,verifiedAt:r.verifiedAt||null,
+   return {id:lab.id,verified:typeof r.verifiedAt==='string'&&r.verifiedAt.length>0,verifiedAt:r.verifiedAt||null,
      attempts:Number(r.attempts)||0,lastScore:Number(r.lastScore)||0};
  });
  const completed=weeks.filter(x=>x.verified).length;
