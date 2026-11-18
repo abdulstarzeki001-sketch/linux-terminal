@@ -110,3 +110,16 @@ The Railway-generated domain must not allow direct access to the shell UI or `/w
 - Validate after activation: anonymous `GET https://terminal-production-fb16bd35.up.railway.app/` returns `403`; Railway `/health` returns `200`; authenticated Wormstar `/terminal/` connects via Cloudflare.
 
 **Scope and limits:** This protects HTTP and WebSocket access to the Railway origin. It does not change how the shell uses `sudo` *inside the isolated container*. This is a complementary origin gate, not a replacement for Cloudflare Access or a hardened sandbox.
+
+## Export your snapshot to iPhone Files without opening Railway to the internet
+
+This workflow uses the existing owner-gated Wormstar Cloudflare Worker. It does not create a paid bucket, grant new users access, or expose the persistent volume over a public download link.
+
+1. Open `https://wormstar-ai-lab.abdulstarzeki001.workers.dev/terminal/` and sign in as owner via Cloudflare Access and your existing Wormstar owner session.
+2. In the terminal, run `persist save`, then `persist backup`, then `persist verify`.
+3. Expand the `النسخ الاحتياطي والأمان` section and tap `تنزيل آخر نسخة للآيفون`.
+4. Save the downloaded `star-home-YYYYMMDDTHHMMSSZ-PID.tgz` in iPhone Files, iCloud Drive or your offline computer storage. Keeping only a copy inside the Railway volume is **not** an offsite backup.
+
+The download is limited to the newest verified archive in `~/backups/`, capped at 80 MiB. Its SHA-256 checksum is checked by Railway before streaming. Cloudflare Access, the Wormstar owner token and the private Worker-origin credential protect the download. The endpoint returns no arbitrary directory or path listing and is intentionally unavailable without `TERMINAL_EDGE_MODE=enforce`.
+
+**Warning:** Filename filters exclude common secrets, but project source files may contain private material or hard-coded keys. Review `~/projects` before exporting. Never share an exported `.tgz` publicly. There is no background or automatic transfer to cloud storage.
