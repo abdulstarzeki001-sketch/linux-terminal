@@ -65,6 +65,22 @@ else
   exit 1
 fi
 
+# Detect the exact owner-approved local CLIs on each startup before opening
+# the terminal. These checks do not access remote hosts or start tool services.
+if gosu tuser /opt/impacket312/bin/python -c 'import importlib.metadata as m; assert m.version("impacket") == "0.13.1"' >/dev/null 2>&1 &&
+   [[ -x /opt/impacket312/bin/impacket-lookupsid ]] &&
+   gosu tuser /opt/frida312/bin/python -c 'import importlib.metadata as m; assert m.version("frida-tools") == "14.13.2"' >/dev/null 2>&1 &&
+   [[ -x /opt/frida312/bin/frida ]] &&
+   [[ -x /usr/bin/afl-fuzz ]] &&
+   dpkg-query -W -f='${Status}' 'afl++' | grep -qx 'install ok installed'; then
+  echo "[STAR TOOLS] IMPACKET=0.13.1 EXECUTABLE=/opt/impacket312/bin/impacket-lookupsid VERIFIED"
+  echo "[STAR TOOLS] FRIDA_TOOLS=14.13.2 EXECUTABLE=/opt/frida312/bin/frida VERIFIED"
+  echo "[STAR TOOLS] AFL_PLUS_PLUS=debian-bookworm EXECUTABLE=/usr/bin/afl-fuzz VERIFIED"
+else
+  echo "[STAR TOOLS] ERROR: one or more approved immutable CLI installations failed runtime checks" >&2
+  exit 1
+fi
+
 # The package manager is ephemeral, while its extra-package manifest is
 # persistent. Restoration is bounded; failure never hides the owner's files.
 if ! /usr/local/bin/wormstar-restore-packages; then
