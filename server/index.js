@@ -10,6 +10,7 @@ const {isConfigured,checkAIStatus,askAI,MAX_PROMPT} = require('./ai');
 const {originGuardConfig,permitOriginRequest} = require('./edge-guard');
 const fs=require('node:fs');
 const {latestSnapshot,verifySnapshot}=require('./backup-export');
+const training=require('./training-engine');
 
 const PORT = Number(process.env.PORT || 8080);
 const PASSWORD = process.env.TERMINAL_PASSWORD || '';
@@ -80,6 +81,24 @@ app.get('/api/snapshots/latest', async (req,res) => {
   return res.download(snapshot.fullPath,snapshot.name,{dotfiles:'deny',acceptRanges:false},err=>{
     if(err && !res.headersSent)res.status(503).json({code:'SNAPSHOT_UNAVAILABLE'});
   });
+});
+// Private, graded training endpoints. Route guards above enforce the
+// Worker-only origin credential. No arbitrary terminal commands are accepted.
+app.post('/api/training/status', (req,res) => {
+  if(!EDGE.enforced)return res.status(503).json({code:'EDGE_GUARD_REQUIRED'});
+  try{
+    return res.set({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'})
+      .json({summary:training.publicStatus(),labs:training.publicLabs()});
+  }catch(_){return res.status(503).json({code:'TRAINING_STATE_UNAVAILABLE'});}
+});
+app.post('/api/training/verify',express.json({limit:'2kb',strict:true}), (req,res) => {
+  if(!EDGE.enforced)return res.status(503).json({code:'EDGE_GUARD_REQUIRED'});
+  try{
+    const result=training.verify(req.body||{});
+    const {httpStatus,...body}=result;
+    return res.status(httpStatus).set({'Cache-Control':'private, no-store',
+      'X-Content-Type-Options':'nosniff'}).json(body);
+  }catch(_){return res.status(503).json({code:'TRAINING_CHECK_UNAVAILABLE'});}
 });
 app.use(express.static(path.join(__dirname, '..', 'web')));
 
