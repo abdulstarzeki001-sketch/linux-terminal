@@ -16,6 +16,19 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     && rm -rf /var/lib/apt/lists/*
 RUN ldconfig && /usr/local/bin/python3.12 -c "import ssl,sqlite3,bz2,lzma,ctypes,venv,ensurepip,sys; assert sys.version_info[:2] == (3, 12)"
 
+# Owner-approved Certipy installation, baked into an auditable immutable image.
+# Distinct from /persist/home/tuser/.venv-py312; no restart-time PyPI writes,
+# no Cloudflare Access bypass and no impact on the existing persistent venv.
+# certipy-ad==5.1.0 officially requires Python 3.12+.
+RUN /usr/local/bin/python3.12 -m venv /opt/certipy-ad312 \
+    && /opt/certipy-ad312/bin/python -m pip install --isolated --no-input \
+         --no-cache-dir --disable-pip-version-check --only-binary=:all: \
+         "certipy-ad==5.1.0" \
+    && /opt/certipy-ad312/bin/python -c "import sys,importlib.metadata as m; assert sys.version_info[:2] == (3,12); assert m.version('certipy-ad') == '5.1.0'" \
+    && test -x /opt/certipy-ad312/bin/certipy \
+    && /opt/certipy-ad312/bin/certipy -h > /dev/null
+
+
 # Non-root user for the shell. sudo is enabled so commands like apt install work.
 # Trade-off: sudo means root inside the container. The container is the isolation boundary.
 RUN useradd -m -s /bin/bash tuser \
