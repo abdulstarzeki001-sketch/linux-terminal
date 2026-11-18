@@ -55,6 +55,8 @@ jobs:
         run: node --test test/*.test.js
       - name: Build isolated AI gateway Docker image
         run: docker build -f ai-gateway/Dockerfile -t star-ai-gateway:ci .
+      - name: Verify AI gateway uses Node.js 24
+        run: docker run --rm --entrypoint node star-ai-gateway:ci -e 'if(process.versions.node.split(".")[0]!=="24")process.exit(1);console.log(process.version)'
 
   kali-container:
     runs-on: ubuntu-latest
@@ -63,6 +65,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build pinned KALI OSINT STAR Railway terminal image
         run: docker build --pull -t star-kali-terminal:ci .
+      - name: Verify terminal uses Node.js 24
+        run: docker run --rm --entrypoint node star-kali-terminal:ci -e 'if(process.versions.node.split(".")[0]!=="24")process.exit(1);console.log(process.version)'
       - name: Verify bundled Python API and loopback client
         run: |
           docker run --rm --entrypoint /bin/bash star-kali-terminal:ci -lc 'PYTHONPATH=/opt/kali-osint-star/services/api /opt/star-kali-venv/bin/python -c "from app.main import app; print(app.version)"'
