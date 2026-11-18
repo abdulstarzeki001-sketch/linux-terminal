@@ -29,7 +29,7 @@ set_status() {
   local temporary
   temporary="$(mktemp "$STATE/.restore-status.XXXXXX")"
   printf '%s %s\n' "$(date -u +%FT%TZ)" "$status" > "$temporary"
-  chmod 600 "$temporary"
+  chmod 644 "$temporary"
   mv -f "$temporary" "$STATUS"
 }
 declare -a missing=()
