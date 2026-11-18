@@ -16,7 +16,7 @@ docker run --rm -v "$VOLUME:/persist" \
     printf "keep-on-volume\n" > "$HOME/projects/reboot-proof.txt"
     printf "pip-state\n" > "$HOME/.venv/PERSISTENCE_PROOF"
     test -x "$HOME/.venv-py312/bin/python"
-    "$HOME/.venv-py312/bin/python" -c 'import sys; assert sys.version_info[:2] == (3,12)'
+    "$HOME/.venv-py312/bin/python" -c "import sys; assert sys.version_info[:2] == (3,12)"
     printf "certipy-venv-kept\n" > "$HOME/.venv-py312/PERSISTENCE_PROOF"
     printf "npm-state\n" > "$HOME/.npm-global/PERSISTENCE_PROOF"
     printf "do-not-export-test-secret\n" > "$HOME/projects/.env"
@@ -41,7 +41,7 @@ docker run --rm -v "$VOLUME:/persist" \
     test "$(cat "$HOME/projects/reboot-proof.txt")" = "keep-on-volume"
     test "$(cat "$HOME/.venv/PERSISTENCE_PROOF")" = "pip-state"
     test "$(cat "$HOME/.venv-py312/PERSISTENCE_PROOF")" = "certipy-venv-kept"
-    "$HOME/.venv-py312/bin/python" -c 'import sys; assert sys.version_info[:2] == (3,12)'
+    "$HOME/.venv-py312/bin/python" -c "import sys; assert sys.version_info[:2] == (3,12)"
     test "$(cat "$HOME/.npm-global/PERSISTENCE_PROOF")" = "npm-state"
     command -v figlet >/dev/null
     persist check
