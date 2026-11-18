@@ -41,6 +41,8 @@ jobs:
           bash -n server/entrypoint.sh
           bash -n server/apt-track.sh
           bash -n server/restore-packages.sh
+          bash -n server/persist-backup.sh
+          bash -n server/restore-user-tools.sh
           bash -n test/persistence-redeploy.sh
           bash -n server/apt-wrapper.sh
           bash -n server/persist-cli.sh
