@@ -42,5 +42,24 @@ docker run --rm -v "$VOLUME:/persist" \
     persist status
     test -f "$HOME/.config/wormstar/pip-packages.txt"
     test -f "$HOME/.config/wormstar/npm-packages.json"
-    echo "SUCCESS: home files, Python/npm state, and extra APT package survived image replacement"
+    persist backup
+    persist verify
+    # Only selected source files and inventories are exported; project .env is excluded.
+    archive="$(find "$HOME/backups" -maxdepth 1 -name "star-home-*.tgz" | head -n 1)"
+    test -f "$archive"
+    tar -tzf "$archive" | grep -q "home/tuser/projects/reboot-proof.txt"
+    if tar -tzf "$archive" | grep -q "home/tuser/projects/\.env"; then
+      echo "ERROR: secret .env entered snapshot" >&2
+      exit 1
+    fi
+    echo "SUCCESS: home files, Python/npm state, APT and backup integrity survived image replacement"
+  '
+
+echo "[TEST] Prove snapshot itself survives another fresh container"
+docker run --rm -v "$VOLUME:/persist" \
+  "$IMAGE" /bin/bash -lc '
+    set -Eeuo pipefail
+    persist verify
+    persist backups
+    echo "SUCCESS: verified private snapshot survived a second image replacement"
   '
