@@ -16,7 +16,7 @@ mkdir -p -m 700 "$DIR"
 chmod 700 "$DIR"
 
 usage(){
-  echo "Usage: persist backup | persist backups | persist verify [latest|snapshot-name.tgz]"
+  echo "Usage: persist backup | persist backups | persist verify [snapshot-name.tgz] | persist unpack [snapshot-name.tgz]"
 }
 find_latest() {
   local latest
@@ -77,6 +77,35 @@ case "${1:-}" in
   backups)
     find "$DIR" -maxdepth 1 -type f -name 'star-home-*.tgz' \
       -printf '%f  (%s bytes)\n' | sort
+    ;;
+  unpack)
+    # Unpack to a new REVIEW directory only. Never overwrite live projects.
+    name="${2:-latest}"
+    [[ "$name" != latest ]] || name="$(find_latest)"
+    [[ "$name" =~ ^star-home-[0-9]{8}T[0-9]{6}Z-[0-9]+\\.tgz$ ]] || {
+      echo "Invalid snapshot name" >&2; exit 2;
+    }
+    file="$DIR/$name"
+    [[ -f "$file" && -f "$file.sha256" ]] || { echo "Snapshot or checksum missing" >&2; exit 1; }
+    sha256sum -c --status "$file.sha256"
+    tar -tzf "$file" >/dev/null
+    # Reject unexpected paths in the archive even after checking its checksum.
+    while IFS= read -r member; do
+      [[ "$member" != /* && "$member" != *".."* ]] || {
+        echo "Unsafe archive member" >&2; exit 1;
+      }
+      case "$member" in
+        home/tuser/projects|home/tuser/projects/*|home/tuser/.profile|home/tuser/.bashrc|home/tuser/.config/wormstar/pip-packages.txt|home/tuser/.config/wormstar/npm-packages.json|state/apt-manual.txt) ;;
+        *) echo "Unexpected archive path; refusing extraction" >&2; exit 1 ;;
+      esac
+    done < <(tar -tzf "$file")
+    mkdir -p -m 700 "$HOME_DIR/restored"
+    target="$HOME_DIR/restored/${name%.tgz}"
+    [[ ! -e "$target" ]] || { echo "Restore review folder already exists: $target" >&2; exit 1; }
+    mkdir -m 700 "$target"
+    tar -xzf "$file" -C "$target" --no-same-owner --no-same-permissions
+    echo "Snapshot unpacked for REVIEW into: $target"
+    echo "No existing project files or APT state were overwritten."
     ;;
   verify)
     name="${2:-latest}"
