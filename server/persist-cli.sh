@@ -17,6 +17,7 @@ usage(){
     "  persist backup           Export safe project/package metadata to private .tgz" \
     "  persist backups          List local snapshots (not offsite)" \
     "  persist verify [name]    Check local snapshot SHA-256 and tar integrity" \
+    "  persist unpack [name]    Extract to NEW review folder, never overwrite projects" \
     "  persist upgrade          Update Debian and replay updates after redeploy" \
     "  persist auto-upgrade on  Replay Debian upgrades on each redeploy" \
     "  persist auto-upgrade off Disable upgrade replay" \
@@ -140,7 +141,7 @@ case "${1:-status}" in
     if [[ "$(id -u)" -eq 0 ]]; then exec /usr/local/bin/wormstar-restore-packages; fi
     exec sudo /usr/local/bin/wormstar-restore-packages
     ;;
-  backup|backups|verify)
+  backup|backups|verify|unpack)
     exec /usr/local/bin/wormstar-persist-backup "$@"
     ;;
   repair-user)
