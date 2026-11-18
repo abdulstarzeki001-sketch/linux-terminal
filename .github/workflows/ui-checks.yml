@@ -46,6 +46,7 @@ jobs:
           bash -n test/persistence-redeploy.sh
           bash -n test/training-http.sh
           bash -n test/tool-ops-http.sh
+          bash -n test/certipy-image-smoke.sh
           node --check server/tool-ops.js
           bash -n server/apt-wrapper.sh
           bash -n server/persist-cli.sh
@@ -86,6 +87,8 @@ jobs:
             /usr/local/bin/python3.12 -m ensurepip --version
             echo "Both isolated Python 3.12 and system Python 3.11 verified"
           '
+      - name: Verify approved Certipy AD 5.1.0 package, CLI and catalog
+        run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/certipy-image-smoke.sh
       - name: Exercise authenticated real HTTP grading and persistence
         run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/training-http.sh
       - name: Real HTTP owner tools catalog, AI dispatch and persistent results
