@@ -329,7 +329,7 @@ test('Cloudflare Access service credentials are transmitted only to pinned self-
   ]){
     assert.equal(provider.isConfigured(broken),false);
   }
-  assert.equal(provider.accessHeaders({}),Object({}));
+  assert.deepEqual(provider.accessHeaders({}),{});
   const openAi={...aiEnv,AI_ENABLED:'1'};
   const kimi={...aiEnv,AI_ENABLED:'1',AI_PROVIDER:'kimi',AI_MODEL:'kimi-k3.1-pro'};
   for(const other of [openAi,kimi]){
