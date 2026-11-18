@@ -38,6 +38,7 @@ COPY server/backup-export.js ./
 COPY server/training-engine.js ./
 COPY server/tool-ops.js ./
 COPY server/tool-installer.js ./
+COPY server/tool-install-runner.js ./
 COPY server/training-fixtures ./training-fixtures
 COPY server/ai.js ./
 COPY server/boot-audit.js ./
