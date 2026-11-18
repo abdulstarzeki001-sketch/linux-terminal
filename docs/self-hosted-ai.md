@@ -28,7 +28,7 @@ Browser -- authenticated WebSocket --> Railway terminal
                             GPU host: vLLM (private port)
 ```
 
-Only the owner operates the GPU server and the network proxy. Protect the hostname with an authenticated TLS gateway. Do not expose the plain vLLM/Ollama port to the internet. For deployment with Cloudflare, configure a named tunnel to route an HTTPS hostname to the GPU host's `localhost` serving port, then enforce origin authentication and an additional edge allow policy where supported.
+Only the owner operates the GPU server and the network proxy. Protect the hostname with an authenticated TLS gateway. Do not expose the plain vLLM/Ollama port to the internet. For deployment with Cloudflare, use the included `deploy/selfhosted-gpu/compose.yml` and map the named tunnel hostname to `http://inference:8000` on the Compose network. Require a Cloudflare Access Service Auth policy for the entire hostname.
 
 ## Railway configuration (AFTER external GPU endpoint works)
 
@@ -37,10 +37,12 @@ In **linux-terminal → star-ai-gateway → Variables**, add:
 ```ini
 AI_PROVIDER=selfhosted
 AI_ENABLED=1
-AI_MODEL=qwen35b
+AI_MODEL=star-selfhost
 AI_SELFHOST_URL=https://inference.your-domain.example/v1/chat/completions
 AI_SELFHOST_ALLOWED_HOST=inference.your-domain.example
 AI_SELFHOST_API_KEY=<distinct, strong inference server bearer token>
+AI_SELFHOST_CF_CLIENT_ID=<your Access service token Client ID>
+AI_SELFHOST_CF_CLIENT_SECRET=<your Access service token Client Secret>
 ```
 
 `inference.your-domain.example` is a **placeholder**, not a functioning address. Replace with your real trusted HTTPS inference hostname in both variables. The gateway refuses HTTP, IP addresses, mismatched hostnames, embedded credentials, query strings and any paths other than `/v1/chat/completions`. Use a token dedicated to this service. The configured `AI_API_KEY` used by the Kimi/OpenAI providers is **never** sent to the self-hosted endpoint.
@@ -49,7 +51,7 @@ Keep `AI_GATEWAY_TOKEN`, `AI_GATEWAY_URL` and terminal authentication unchanged.
 
 ## Validation
 
-1. In your authorized GPU environment, start the chosen model with an OpenAI-compatible chat endpoint, an explicit served model name `qwen35b`, bearer authentication, and low context length.
+1. In your authorized GPU environment, start the chosen model with an OpenAI-compatible chat endpoint, an explicit served model name `star-selfhost`, bearer authentication, and low context length.
 2. Confirm `curl` from an authorized client reaches the HTTPS hostname and obtains a chat reply with the dedicated bearer token. Do not print the token in logs.
 3. Check CI on the branch (Node tests, syntax checks, gateway Docker image).
 4. Set Railway variables and redeploy only after the endpoint is ready; check authenticated terminal AI Status, then send a harmless sample prompt.
@@ -57,6 +59,6 @@ Keep `AI_GATEWAY_TOKEN`, `AI_GATEWAY_URL` and terminal authentication unchanged.
 
 ## Security limitations
 
-The current URL guard validates scheme, exact owner-configured hostname, host type and endpoint path. TLS protects transit. Configure DNS and Cloudflare Tunnel with control of the domain. For a stricter zero-trust deployment, require additional service identity headers at a reverse proxy. The current Railway integration forwards one bearer token; Cloudflare Access service-token headers are **not** implemented here.
+The current URL guard validates scheme, exact owner-configured hostname, host type and endpoint path. TLS protects transit. Configure DNS and Cloudflare Tunnel with control of the domain. When both `AI_SELFHOST_CF_CLIENT_ID` and `AI_SELFHOST_CF_CLIENT_SECRET` are set, the gateway also sends Cloudflare Access service-token headers only to the pinned self-hosted hostname. A partial pair is rejected. These tokens are required when you put the inference hostname behind a Cloudflare Access Service Auth policy. Preserve the independent vLLM bearer token.
 
 Full Kimi K3.1 Pro self-hosting requires an unusually large multi-GPU cluster; it is not a practical 48GB single-GPU candidate.
