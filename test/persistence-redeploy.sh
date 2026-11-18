@@ -16,6 +16,7 @@ docker run --rm -v "$VOLUME:/persist" \
     printf "keep-on-volume\n" > "$HOME/projects/reboot-proof.txt"
     printf "pip-state\n" > "$HOME/.venv/PERSISTENCE_PROOF"
     printf "npm-state\n" > "$HOME/.npm-global/PERSISTENCE_PROOF"
+    printf "do-not-export-test-secret\n" > "$HOME/projects/.env"
     persist check
     persist save
   '
