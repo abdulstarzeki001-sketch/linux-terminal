@@ -1,0 +1,7 @@
+time,event_id,account,service,encryption,status
+09:00,4768,alice,krbtgt,0x12,0x0
+09:01,4769,svc_backup,cifs/dc01,0x17,0x0
+09:02,4769,svc_backup,http/files,0x17,0x0
+09:03,4769,alice,ldap/dc01,0x12,0x0
+09:04,4769,svc_backup,cifs/files,0x17,0x0
+09:05,4771,bob,krbtgt,0x12,0x18

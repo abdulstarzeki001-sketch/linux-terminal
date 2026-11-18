@@ -1,0 +1,5 @@
+case=0001 signal=SIGSEGV function=parse_manifest offset=0x000a
+case=0002 signal=SIGABRT function=parse_version offset=0x0021
+case=0003 signal=SIGSEGV function=parse_manifest offset=0x000c
+case=0004 signal=SIGSEGV function=parse_manifest offset=0x000f
+case=0005 signal=TIMEOUT function=read_file offset=0x0030

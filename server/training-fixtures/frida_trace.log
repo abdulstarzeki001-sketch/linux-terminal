@@ -1,0 +1,7 @@
+10:02:01 Java_com_lab_App_loadConfig config=debug
+10:02:03 SSL_set_verify mode=1
+10:02:05 BIO_read bytes=480
+10:02:06 SSL_set_verify mode=0
+10:02:07 SSL_write bytes=91
+10:02:08 SSL_set_verify mode=0
+10:02:09 EVP_DigestVerifyFinal result=1

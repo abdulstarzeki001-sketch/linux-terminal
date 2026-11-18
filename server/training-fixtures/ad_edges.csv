@@ -1,0 +1,7 @@
+from,to,relation
+analyst,helpdesk,MemberOf
+helpdesk,server-admins,AddMember
+server-admins,dc01,AdminTo
+analyst,workstation,HasSession
+workstation,printers,CanRDP
+helpdesk,file-share,ReadData
