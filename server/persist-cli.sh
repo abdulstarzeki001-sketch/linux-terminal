@@ -114,9 +114,15 @@ save_user(){
   fi
   if command -v npm >/dev/null 2>&1; then
     tmp="$(mktemp "$USER_META/.npm-packages.XXXXXXXX")"
-    if NPM_CONFIG_PREFIX="$HOME_DIR/.npm-global" npm ls -g --depth=0 --json >"$tmp" 2>/dev/null; then
-      chmod 600 "$tmp"; mv "$tmp" "$USER_META/npm-packages.json"
-    else rm -f "$tmp"; echo "WARNING: cannot snapshot npm global packages" >&2; fi
+    # npm ls can exit non-zero for an empty prefix or broken dependencies
+    # while still writing valid JSON. Keep the inventory, not its exit code.
+    NPM_CONFIG_PREFIX="$HOME_DIR/.npm-global" npm ls -g --depth=0 --json >"$tmp" 2>/dev/null || true
+    if ! node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$tmp" >/dev/null 2>&1; then
+      printf '{"status":"unavailable","dependencies":{}}\n' > "$tmp"
+      echo "WARNING: npm inventory unavailable; globally installed packages remain on the volume" >&2
+    fi
+    chmod 600 "$tmp"
+    mv "$tmp" "$USER_META/npm-packages.json"
   fi
   echo "Saved APT catalog and Python/npm inventories to the existing Railway volume."
 }
