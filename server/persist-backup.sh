@@ -82,7 +82,7 @@ case "${1:-}" in
     # Unpack to a new REVIEW directory only. Never overwrite live projects.
     name="${2:-latest}"
     [[ "$name" != latest ]] || name="$(find_latest)"
-    [[ "$name" =~ ^star-home-[0-9]{8}T[0-9]{6}Z-[0-9]+\\.tgz$ ]] || {
+    [[ "$name" =~ ^star-home-[0-9]{8}T[0-9]{6}Z-[0-9]+\.tgz$ ]] || {
       echo "Invalid snapshot name" >&2; exit 2;
     }
     file="$DIR/$name"
