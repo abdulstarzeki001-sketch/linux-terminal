@@ -110,7 +110,7 @@ test('route checks, Docker deployment and safe runtime path stay present',()=>{
  }
  assert.ok(src.indexOf('app.use((req, res, next)')<src.indexOf("app.post('/api/tools/install/start'"));
  assert.match(src,/RUN_ONE_PROVIDER_CHECK/);
- assert.match(src,/INSTALL_CURATED_PINNED/);
+ assert.match(fs.readFileSync(require.resolve('../server/tool-maintenance.js'),'utf8'),/INSTALL_CURATED_PINNED/);
  assert.match(docker,/COPY server\/tool-maintenance\.js/);
  assert.match(docker,/COPY server\/tool-diagnostics\.js/);
  const installer=fs.readFileSync(require.resolve('../server/tool-maintenance.js'),'utf8');
