@@ -12,6 +12,8 @@ const fs=require('node:fs');
 const {latestSnapshot,verifySnapshot}=require('./backup-export');
 const training=require('./training-engine');
 const toolOps=require('./tool-ops');
+const toolMaintenance=require('./tool-maintenance');
+const toolDiagnostics=require('./tool-diagnostics');
 
 const PORT = Number(process.env.PORT || 8080);
 const PASSWORD = process.env.TERMINAL_PASSWORD || '';
@@ -127,6 +129,43 @@ app.post('/api/tools/assistant',boundedToolsJSON,async(req,res)=>{
   const {httpStatus,...data}=result;
   return res.status(httpStatus).set({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}).json(data);
  }catch(_){return res.status(503).json({code:'TOOLS_ASSISTANT_UNAVAILABLE'});}
+});
+// Phase 1: real non-invasive health of the existing Railway, Kali and AI chain.
+app.post('/api/tools/diagnostics',async(req,res)=>{
+ if(!EDGE.enforced)return res.status(503).json({code:'EDGE_GUARD_REQUIRED'});
+ try{return res.set({'Cache-Control':'private, no-store'}).json(await toolDiagnostics.snapshot());}
+ catch(_){return res.status(503).json({code:'DIAGNOSTICS_UNAVAILABLE'});}
+});
+// The owner must explicitly request this single possibly billable AI inference.
+// No automatic provider request is made when simply opening the page.
+app.post('/api/tools/live-ai',boundedToolsJSON,async(req,res)=>{
+ if(!EDGE.enforced)return res.status(503).json({code:'EDGE_GUARD_REQUIRED'});
+ if(!req.body||Object.keys(req.body).length!==1||
+    req.body.confirm!=='RUN_ONE_PROVIDER_CHECK')
+   return res.status(400).json({code:'AI_PROBE_CONFIRM_REQUIRED'});
+ const r=await toolDiagnostics.liveAI();
+ const {httpStatus,...body}=r;
+ return res.status(httpStatus).set({'Cache-Control':'private, no-store'}).json(body);
+});
+// Phase 2: tightly scoped non-root installs of audited, pinned wheels.
+// All other packages—including C2, root services, Windows executables—are
+// explicitly NOT installable through the owner web surface.
+app.post('/api/tools/install/status',async(req,res)=>{
+ if(!EDGE.enforced)return res.status(503).json({code:'EDGE_GUARD_REQUIRED'});
+ try{return res.set({'Cache-Control':'private, no-store'}).json(await toolMaintenance.status());}
+ catch(_){return res.status(503).json({code:'INSTALL_STATUS_UNAVAILABLE'});}
+});
+app.post('/api/tools/install/start',boundedToolsJSON,(req,res)=>{
+ if(!EDGE.enforced)return res.status(503).json({code:'EDGE_GUARD_REQUIRED'});
+ const b=req.body;
+ if(!b||Object.keys(b).sort().join(',')!=='confirm,tool_id'||
+    typeof b.tool_id!=='string'||typeof b.confirm!=='string')
+   return res.status(400).json({code:'INSTALL_NOT_APPROVED'});
+ try{
+  const out=toolMaintenance.start({tool_id:b.tool_id,confirm:b.confirm});
+  const {httpStatus,...body}=out;
+  return res.status(httpStatus).set({'Cache-Control':'private, no-store'}).json(body);
+ }catch(_){return res.status(503).json({code:'INSTALL_STATE_UNAVAILABLE'});}
 });
 app.use(express.static(path.join(__dirname, '..', 'web')));
 
