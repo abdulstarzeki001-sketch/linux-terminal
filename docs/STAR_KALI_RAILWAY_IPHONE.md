@@ -46,3 +46,29 @@ This integration bundles the reviewed KALI-OSINT-STAR repository at a **fixed Gi
 ## Recovery / rollback
 
 The change is isolated to the `linux-terminal` image and startup command, and does **not** overwrite the persistent volume. If Railway fails, roll back to the previous successfully deployed image using Railway's rollback. User files in `/persist` remain intact. The credential file and SQLite will remain on the existing volume; back up before deleting the volume.
+
+## Persistent applications and updates (iPhone)
+
+The existing Railway volume `wormstar-terminal-data` (currently 500 MB, mounted at `/persist`) persists across image replacement. The interactive shell's `/home/tuser` points to that volume.
+
+Use the owner terminal at `https://wormstar-ai-lab.abdulstarzeki001.workers.dev/terminal/`:
+
+```bash
+persist status            # show volume, saved APT packages and last restore
+persist check             # verify volume, persistent Python/npm and APT tools
+sudo apt install figlet   # example: automatically tracked in /persist
+pip install requests      # installs to ~/.venv on the volume
+npm install -g typescript # installs to ~/.npm-global on the volume
+persist save              # save APT and package metadata snapshots
+persist repair            # retry missed APT packages after network outages
+persist upgrade           # upgrade Debian and replay updates on later deploys
+persist auto-upgrade off  # disable OS upgrade replay if startup takes too long
+```
+
+The startup runner checks each saved APT package against the new image, reinstalls missing names and records `ready` or `degraded` under `/persist/state/restore-status.txt`. It uses bounded timeouts, so an unavailable Debian mirror does not permanently block terminal startup. `persist repair` retries without a new deployment.
+
+Python's `~/.venv`, global npm's `~/.npm-global`, repositories, dotfiles, reports, shell history and local STAR API SQLite data are all stored under the persistent home directory. `persist save` records additional name/version inventories at `~/.config/wormstar/pip-packages.txt` and `npm-packages.json`, avoiding `pip freeze` URL credentials. Packages themselves already live in these persistent directories.
+
+**Limits:** OS images are ephemeral; editing `/etc`, `/opt`, `/usr/local` or `/usr/bin` manually is not persistent. APT package versions may change because Debian repositories update; installed packages can fail to restore if their names disappear or network is unavailable. Major Python changes may require rebuilding the virtualenv. The 500 MB volume is not an independent backup: enable Railway Volume Backups or copy critical files to a separate repository. Do not delete/detach the existing volume.
+
+CI uses two fresh Docker containers sharing one temporary volume. It verifies persistent home/Python/npm state, an automatically captured APT package manifest and restoration of a small extra APT package in the second container.
