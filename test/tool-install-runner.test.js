@@ -5,7 +5,7 @@ const fs=require('node:fs');
 const os=require('node:os');
 const path=require('node:path');
 const {EventEmitter}=require('node:events');
-const {APPROVAL,PACKAGES,APPROVED_IDS,MIN_FREE_BYTES,MIN_ROOT_FREE_BYTES,startInstall,readJobs}=require('../server/tool-install-runner');
+const {APPROVAL,PACKAGES,APPROVED_IDS,MIN_FREE_BYTES,MIN_ROOT_FREE_BYTES,startInstall,readJobs,supportsCertipyPython}=require('../server/tool-install-runner');
 test('installer refuses arbitrary shell strings, unapproved tools and missing owner approval',()=>{
  assert.equal(startInstall({tool_id:'frida'}).httpStatus,400);
  assert.equal(startInstall({tool_id:'mythic',approval:APPROVAL}).httpStatus,403);
@@ -38,7 +38,7 @@ test('approved install uses fixed non-shell pinned pip invocation and writes dur
   return child;
  };
  try{
-  const opts={root,home,python:'/usr/bin/env',stateFile,freeBytes:MIN_FREE_BYTES+1,spawnFn,noThrottle:true};
+  const opts={root,home,python:'/usr/bin/env',stateFile,freeBytes:MIN_FREE_BYTES+1,spawnFn,noThrottle:true,verifyFn:()=>true};
   const start=startInstall({tool_id:'impacket',approval:APPROVAL},opts);
   assert.equal(start.httpStatus,202);
   assert.equal(invoked.binary,'/usr/bin/env');
@@ -76,7 +76,7 @@ test('all four approved installers are explicit, AFL++ uses only signed Debian A
  try{
   const config={home,root,python:'/usr/bin/env',stateFile:path.join(home,'jobs.json'),
    freeBytes:MIN_FREE_BYTES+1,rootFreeBytes:MIN_ROOT_FREE_BYTES+1,
-   aptScript:'/usr/bin/env',sudoPath:'/usr/bin/sudo',spawnFn,noThrottle:true};
+   aptScript:'/usr/bin/env',sudoPath:'/usr/bin/sudo',spawnFn,noThrottle:true,verifyFn:()=>true};
   assert.equal(startInstall({tool_id:'aflpp',approval:APPROVAL},{...config,rootFreeBytes:1}).code,'INSTALL_ROOT_DISK_SPACE_LOW');
   const result=startInstall({tool_id:'aflpp',approval:APPROVAL},config);
   assert.equal(result.httpStatus,202);
@@ -95,4 +95,42 @@ test('AFL++ script is immutable in image and never accepts user package names',(
  assert.match(source,/wormstar-apt-track/);
  const docker=fs.readFileSync(path.join(__dirname,'..','Dockerfile'),'utf8');
  assert.match(docker,/COPY server\/install-approved-afl\.sh/);
+});
+
+test('Certipy 5.1.0 never runs on Python 3.11 even with owner approval',()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'star-certipy-compat-'));
+ const home=path.join(root,'home','tuser');fs.mkdirSync(home,{recursive:true});
+ let called=false;
+ const opts={root,home,python:'/usr/bin/env',stateFile:path.join(home,'jobs.json'),
+   freeBytes:MIN_FREE_BYTES+1,pythonVersion:'3.11.2',
+   spawnFn:()=>{called=true;throw Error('should not start');},noThrottle:true};
+ try{
+  assert.equal(supportsCertipyPython('3.11.2'),false);
+  assert.equal(supportsCertipyPython('3.12.0'),true);
+  const res=startInstall({tool_id:'certipy',approval:APPROVAL},opts);
+  assert.equal(res.httpStatus,409);
+  assert.equal(res.code,'INSTALL_PYTHON_VERSION_UNSUPPORTED');
+  assert.equal(res.pythonVersion,'3.11.2');
+  assert.equal(called,false);
+  assert.deepEqual(readJobs(opts),{});
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});
+test('pip exit 0 without a recognized executable is not a successful installation',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'star-install-verify-'));
+ const home=path.join(root,'home','tuser');fs.mkdirSync(home,{recursive:true});
+ const spawnFn=()=>{
+  const child=new EventEmitter();child.stdout=new EventEmitter();child.stderr=new EventEmitter();
+  process.nextTick(()=>child.emit('close',0));
+  return child;
+ };
+ const opts={root,home,python:'/usr/bin/env',stateFile:path.join(home,'jobs.json'),freeBytes:MIN_FREE_BYTES+1,
+  spawnFn,verifyFn:()=>false,noThrottle:true};
+ try{
+  assert.equal(startInstall({tool_id:'impacket',approval:APPROVAL},opts).httpStatus,202);
+  await new Promise(resolve=>setImmediate(resolve));
+  const job=readJobs(opts).impacket;
+  assert.equal(job.status,'failed');
+  assert.equal(job.exitCode,0);
+  assert.match(job.output,/no executable was detected/);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
