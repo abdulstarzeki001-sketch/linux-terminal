@@ -13,5 +13,5 @@ flock -w 20 9 || { echo "Package manager is busy" >&2; exit 75; }
 timeout -k 10s 180s /usr/bin/apt-get update -qq
 timeout -k 10s 480s /usr/bin/apt-get install -y --no-install-recommends afl++
 /usr/local/bin/wormstar-apt-track
-/usr/bin/dpkg-query -W -f='\x24{Status}' 'afl++' | grep -qx 'install ok installed'
+/usr/bin/dpkg-query -W -f='${Status}' 'afl++' | grep -qx 'install ok installed'
 echo "AFL++ package installed and inventory saved"
