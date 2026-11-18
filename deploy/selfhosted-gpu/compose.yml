@@ -16,6 +16,9 @@ services:
       - ${AI_MODEL_NAME:-star-selfhost}
       - --max-model-len
       - "${MAX_MODEL_LEN:-4096}"
+      - --reasoning-parser
+      - qwen3
+      - --language-model-only
       - --gpu-memory-utilization
       - "0.85"
       - --host
