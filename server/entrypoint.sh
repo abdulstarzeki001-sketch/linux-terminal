@@ -39,6 +39,22 @@ if [[ ! -x "$HOME_DIR/.venv/bin/python" ]]; then
   fi
 fi
 
+# Create an isolated Certipy Python 3.12 venv on the persistent volume.
+# Never migrate or overwrite the existing .venv (Debian Python 3.11).
+CERTIPY_ENV="$IMAGE_HOME/.venv-py312"
+if [[ ! -e "$CERTIPY_ENV/bin/python" ]]; then
+  if ! gosu tuser /usr/local/bin/python3.12 -m venv "$CERTIPY_ENV"; then
+    echo "WARNING: Python 3.12 Certipy environment initialization failed; existing venv is unchanged." >&2
+  fi
+fi
+if [[ -x "$CERTIPY_ENV/bin/python" ]]; then
+  if gosu tuser "$CERTIPY_ENV/bin/python" -c 'import sys; assert sys.version_info[:2] == (3, 12)' 2>/dev/null; then
+    echo "[PERSIST] Certipy Python 3.12 environment ready on persistent volume."
+  else
+    echo "WARNING: existing Certipy environment does not use Python 3.12; refusing to overwrite it." >&2
+  fi
+fi
+
 # The package manager is ephemeral, while its extra-package manifest is
 # persistent. Restoration is bounded; failure never hides the owner's files.
 if ! /usr/local/bin/wormstar-restore-packages; then
