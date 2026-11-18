@@ -45,6 +45,11 @@ docker run --rm -v "$VOLUME:/persist" \
     test -f "$HOME/.config/wormstar/npm-packages.json"
     persist backup
     persist verify
+    persist unpack
+    recovered="$(find "$HOME/restored" -maxdepth 1 -type d -name "star-home-*" | head -n 1)"
+    test -n "$recovered"
+    test "$(cat "$recovered/home/tuser/projects/reboot-proof.txt")" = "keep-on-volume"
+    test ! -f "$recovered/home/tuser/projects/.env"
     # Only selected source files and inventories are exported; project .env is excluded.
     archive="$(find "$HOME/backups" -maxdepth 1 -name "star-home-*.tgz" | head -n 1)"
     test -f "$archive"
