@@ -29,7 +29,7 @@ const TOOLS=Object.freeze([
  {id:'aflpp',name:'AFL++',group:'Research',bins:['afl-fuzz'],alias:['afl++','afl-fuzz','aflpp'],guide:'يحتاج برنامجاً تدريبياً معزولاً؛ نسخة الأداة فقط.',version:['-V']},
  {id:'syzkaller',name:'Syzkaller',group:'Research',bins:['syz-manager'],alias:['syzkaller','سايزكالير'],guide:'يحتاج Kernel VM مستقلة؛ لا تشغيل فحص نواة تلقائياً.',version:null}
 ]);
-const BIN_DIRS=['/usr/local/bin','/usr/bin','/bin','/opt/star-kali-venv/bin','/opt/certipy-ad312/bin','/home/tuser/.venv/bin','/home/tuser/.venv-py312/bin','/home/tuser/.local/bin','/home/tuser/.npm-global/bin'];
+const BIN_DIRS=['/usr/local/bin','/usr/bin','/bin','/opt/star-kali-venv/bin','/opt/certipy-ad312/bin','/opt/impacket312/bin','/opt/frida312/bin','/home/tuser/.venv/bin','/home/tuser/.venv-py312/bin','/home/tuser/.local/bin','/home/tuser/.npm-global/bin'];
 const STORAGE=process.env.STAR_TOOLS_LOG_PATH||'/home/tuser/.config/wormstar/tools-activity.json';
 const RETAIN=60;
 function resolveBinary(t,dirList=BIN_DIRS){
