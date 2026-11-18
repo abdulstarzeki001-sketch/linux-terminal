@@ -12,6 +12,7 @@ const fs=require('node:fs');
 const {latestSnapshot,verifySnapshot}=require('./backup-export');
 const training=require('./training-engine');
 const toolOps=require('./tool-ops');
+const toolInstaller=require('./tool-installer');
 
 const PORT = Number(process.env.PORT || 8080);
 const PASSWORD = process.env.TERMINAL_PASSWORD || '';
@@ -110,6 +111,14 @@ app.post('/api/tools/catalog', (req,res)=>{
    return res.set({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'})
      .json({...toolOps.snapshot(),history:toolOps.readActivity().slice(-30).reverse()});
  }catch(_){return res.status(503).json({code:'TOOLS_CATALOG_UNAVAILABLE'});}
+});
+// Read-only installer planning; protected by the same private origin guard.
+app.post('/api/tools/install/catalog',(req,res)=>{
+ if(!EDGE.enforced)return res.status(503).json({code:'EDGE_GUARD_REQUIRED'});
+ try {
+  return res.set({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'})
+    .json(toolInstaller.getCatalog());
+ } catch (_) {return res.status(503).json({code:'TOOLS_INSTALL_CATALOG_UNAVAILABLE'});}
 });
 app.post('/api/tools/run',boundedToolsJSON,async(req,res)=>{
  if(!EDGE.enforced)return res.status(503).json({code:'EDGE_GUARD_REQUIRED'});
