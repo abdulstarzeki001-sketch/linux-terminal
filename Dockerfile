@@ -35,7 +35,8 @@ RUN /usr/local/bin/python3.12 -m venv /opt/impacket312 \
          --no-cache-dir --disable-pip-version-check --only-binary=:all: \
          "impacket==0.13.1" \
     && /opt/impacket312/bin/python -c "import importlib.metadata as m; assert m.version('impacket') == '0.13.1'" \
-    && test -x /opt/impacket312/bin/impacket-lookupsid \
+    && test -x /opt/impacket312/bin/lookupsid.py \
+    && ln -s lookupsid.py /opt/impacket312/bin/impacket-lookupsid \
     && /opt/impacket312/bin/impacket-lookupsid -h > /dev/null
 RUN /usr/local/bin/python3.12 -m venv /opt/frida312 \
     && /opt/frida312/bin/python -m pip install --isolated --no-input \
