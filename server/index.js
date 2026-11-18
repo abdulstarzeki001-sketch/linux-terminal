@@ -9,7 +9,7 @@ const pty = require('node-pty');
 const {isConfigured,checkAIStatus,askAI,MAX_PROMPT} = require('./ai');
 const {originGuardConfig,permitOriginRequest} = require('./edge-guard');
 const fs=require('node:fs');
-const {latestSnapshot}=require('./backup-export');
+const {latestSnapshot,verifySnapshot}=require('./backup-export');
 
 const PORT = Number(process.env.PORT || 8080);
 const PASSWORD = process.env.TERMINAL_PASSWORD || '';
@@ -63,12 +63,14 @@ app.use((req, res, next) => {
 });
 // Snapshot export is deliberately disabled unless the private origin guard is
 // enforced. Cloudflare Access additionally requires the owner's session.
-app.get('/api/snapshots/latest', (req,res) => {
+app.get('/api/snapshots/latest', async (req,res) => {
   if (!EDGE.enforced) return res.status(503).json({code:'EDGE_GUARD_REQUIRED'});
   let snapshot;
   try {snapshot=latestSnapshot(path.join(SHELL_HOME,'backups'));}
   catch (_) {return res.status(503).json({code:'SNAPSHOT_UNAVAILABLE'});}
   if (!snapshot) return res.status(404).json({code:'SNAPSHOT_NOT_FOUND'});
+  try {if (!await verifySnapshot(snapshot))return res.status(422).json({code:'SNAPSHOT_CORRUPT'});}
+  catch (_) {return res.status(503).json({code:'SNAPSHOT_UNAVAILABLE'});}
   res.set({
     'Cache-Control':'private, no-store, max-age=0',
     'Pragma':'no-cache',
