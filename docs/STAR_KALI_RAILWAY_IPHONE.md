@@ -72,3 +72,28 @@ Python's `~/.venv`, global npm's `~/.npm-global`, repositories, dotfiles, report
 **Limits:** OS images are ephemeral; editing `/etc`, `/opt`, `/usr/local` or `/usr/bin` manually is not persistent. APT package versions may change because Debian repositories update; installed packages can fail to restore if their names disappear or network is unavailable. Major Python changes may require rebuilding the virtualenv. The 500 MB volume is not an independent backup: enable Railway Volume Backups or copy critical files to a separate repository. Do not delete/detach the existing volume.
 
 CI uses two fresh Docker containers sharing one temporary volume. It verifies persistent home/Python/npm state, an automatically captured APT package manifest and restoration of a small extra APT package in the second container.
+
+## Recovery gaps closed (November 18, 2026)
+
+The default 500 MB Railway Volume contains persistent user files, package inventories and APT restore state. The added commands cover two remaining recovery cases:
+
+```bash
+persist save          # update private inventories (after installing pip/npm packages)
+persist repair-user   # ON DEMAND only: reinstall pinned user Python/npm packages
+persist backup        # create local, private, size-limited .tgz with SHA-256
+persist backups       # list up to three snapshot archives on the volume
+persist verify        # validate latest SHA-256 and compressed-tar structure
+persist unpack        # extract to ~/restored/<snapshot-name>, no overwrite
+persist verify star-home-YYYYMMDDTHHMMSSZ-PID.tgz
+persist check         # check current apps, volume link and package restoration
+```
+
+**Snapshot contents:** `~/projects`, a `.bashrc` and `.profile` when present, pip/npm package **metadata** and the tracked Debian APT package list. It omits Git metadata, `node_modules`, `.venv`, npm caches, `.env` files, `.npmrc`, obvious private keys and password files. It does not archive `~/.ssh`, STAR AI gateway API keys or user conversation data. Other sensitive content inside your project source files is not detectable reliably and may still be present, so review what you store in `~/projects`.
+
+**Snapshot constraints:** This command deliberately refuses more than three on-volume archives, data exceeding 80 MiB uncompressed, or a volume with less than 32 MiB free. Archives and SHA-256 files are private (0600). The CLI never deletes existing archives automatically. To verify your last archive: `persist verify`. There is **no automatic restoration of project files**, to avoid overwriting user work. `persist unpack` verifies the archive, rejects unexpected/absolute paths and extracts into a *new* `~/restored/` review folder; it never overwrites a live project.
+
+**Important:** A snapshot on `/persist/home/tuser/backups` is **not an independent offsite backup**. If Railway loses or deletes the volume, that snapshot is lost too. Export it from an authenticated terminal to your own offline storage, use Railway native backups where your plan offers them, or commit non-secret sources to private GitHub repositories. No bucket, cloud storage credentials, or additional recurring charges are provisioned by this change.
+
+**User tool repair:** `persist repair-user` is explicit because it contacts public Python/npm registries and npm packages can run code when installed. Only valid package names and pinned numeric version strings from the owner-created inventory are accepted, and npm install runs with `--ignore-scripts` to reduce lifecycle risk. The command does not run at startup, does not replace a broken venv automatically, and does not modify system APT packages. Use `persist repair` for APT failures instead.
+
+The real Docker integration test creates multiple independent containers with one shared throwaway volume, validates the exported archive and checksum and confirms project `.env` exclusion. A successful test is not proof of offsite backup availability.

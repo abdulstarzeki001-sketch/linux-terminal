@@ -44,6 +44,8 @@ COPY server/restore-packages.sh /usr/local/bin/wormstar-restore-packages
 COPY server/apt-wrapper.sh /usr/local/bin/apt
 COPY server/apt-wrapper.sh /usr/local/bin/apt-get
 COPY server/persist-cli.sh /usr/local/bin/persist
+COPY server/persist-backup.sh /usr/local/bin/wormstar-persist-backup
+COPY server/restore-user-tools.sh /usr/local/bin/wormstar-restore-user-tools
 COPY web /app/web
 
 # Keep default Debian profile, then add visual Bash colors to interactive login shells.
@@ -56,6 +58,7 @@ RUN mkdir -p /persist /usr/local/share \
        /usr/local/bin/wormstar-restore-packages \
        /app/server/run-with-kali.sh /usr/local/bin/star-kali \
        /usr/local/bin/apt /usr/local/bin/apt-get /usr/local/bin/persist \
+       /usr/local/bin/wormstar-persist-backup /usr/local/bin/wormstar-restore-user-tools \
     && apt-mark showmanual | LC_ALL=C sort -u > /usr/local/share/wormstar-manual-base.txt \
     && printf 'DPkg::Post-Invoke { "/usr/local/bin/wormstar-apt-track || true"; };\n' > /etc/apt/apt.conf.d/98wormstar-persist \
     && chown -R tuser:tuser /app
