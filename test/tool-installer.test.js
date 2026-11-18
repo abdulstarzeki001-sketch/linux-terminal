@@ -13,7 +13,9 @@ test('all 15 receive explicit install policy and no program is started',()=>{
  assert.equal(c.tools.length,15);
  assert.ok(c.tools.every(t=>t.install.requiresApproval&&!t.install.executed));
  assert.equal(c.tools.find(t=>t.id==='rubeus').install.command,null);
- assert.equal(c.tools.find(t=>t.id==='netexec').install.policy,'owner_terminal_approval');
+ assert.equal(c.tools.find(t=>t.id==='netexec').install.policy,'manual_review');
+ assert.equal(c.tools.find(t=>t.id==='certipy').install.policy,'owner_one_click');
+ assert.equal(c.summary.automatedInstallsEnabled,true);
 });
 test('persistent APT inventory is read, filtered, and never interpreted as shell',()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'star-installer-'));

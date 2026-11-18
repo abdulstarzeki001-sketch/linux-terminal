@@ -1,0 +1,59 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const {EventEmitter}=require('node:events');
+const {APPROVAL,PACKAGES,MIN_FREE_BYTES,startInstall,readJobs}=require('../server/tool-install-runner');
+test('installer refuses arbitrary shell strings, unapproved tools and missing owner approval',()=>{
+ assert.equal(startInstall({tool_id:'frida'}).httpStatus,400);
+ assert.equal(startInstall({tool_id:'mythic',approval:APPROVAL}).httpStatus,403);
+ assert.equal(startInstall({tool_id:'frida',approval:APPROVAL,command:'curl evil'}).httpStatus,400);
+ assert.equal(startInstall({tool_id:'frida;echo hacked',approval:APPROVAL}).httpStatus,403);
+ assert.deepEqual(Object.keys(PACKAGES).sort(),['certipy','frida','impacket']);
+});
+test('installer checks persistent disk before allowing any child process',()=>{
+ let invoked=false;
+ const r=startInstall({tool_id:'frida',approval:APPROVAL},{home:'/definitely/missing',spawnFn:()=>{invoked=true;throw Error('should not run');}});
+ assert.equal(r.httpStatus,503);
+ assert.equal(invoked,false);
+ assert.ok(MIN_FREE_BYTES>=200*1024*1024);
+});
+test('approved install uses fixed non-shell pinned pip invocation and writes durable outcome',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'star-allowlisted-'));
+ const home=path.join(root,'home','tuser');
+ fs.mkdirSync(home,{recursive:true});
+ const stateFile=path.join(home,'.config','wormstar','owner-installs.json');
+ let invoked=null;
+ const stream=()=>new EventEmitter();
+ const spawnFn=(binary,args,opts)=>{
+  invoked={binary,args,opts};
+  const child=new EventEmitter();
+  child.stdout=stream();child.stderr=stream();
+  process.nextTick(()=>{
+   child.stdout.emit('data',Buffer.from('Successfully installed approved test wheel'));
+   child.emit('close',0);
+  });
+  return child;
+ };
+ try{
+  const opts={root,home,python:'/usr/bin/env',stateFile,freeBytes:MIN_FREE_BYTES+1,spawnFn,noThrottle:true};
+  const start=startInstall({tool_id:'impacket',approval:APPROVAL},opts);
+  assert.equal(start.httpStatus,202);
+  assert.equal(invoked.binary,'/usr/bin/env');
+  assert.equal(invoked.opts.shell,false);
+  assert.equal(invoked.opts.stdio[0],'ignore');
+  assert.ok(invoked.args.includes('impacket==0.13.1'));
+  assert.ok(!invoked.args.some(x=>x.includes(';')||x==='-c'));
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(readJobs(opts).impacket.status,'succeeded');
+  assert.match(readJobs(opts).impacket.output,/Successfully installed/);
+  assert.equal(fs.statSync(stateFile).mode&0o777,0o600);
+ } finally {fs.rmSync(root,{recursive:true,force:true});}
+});
+test('HTTP installer never lacks private origin guard',()=>{
+ const code=fs.readFileSync(path.join(__dirname,'..','server','index.js'),'utf8');
+ assert.match(code,/app\.post\('\/api\/tools\/install\/execute',boundedToolsJSON/);
+ assert.match(code,/if\(!EDGE\.enforced\)return res\.status\(503\)/);
+});
