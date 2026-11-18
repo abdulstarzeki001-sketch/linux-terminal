@@ -30,4 +30,22 @@ function latestSnapshot(dir,fsImpl=fs) {
   return valid[0]||null;
 }
 
-module.exports={latestSnapshot,SNAPSHOT_NAME,MAX_DOWNLOAD_BYTES};
+async function verifySnapshot(snapshot) {
+  if(!snapshot || !SNAPSHOT_NAME.test(snapshot.name))return false;
+  let data;
+  try {data=await fs.promises.readFile(snapshot.fullPath+'.sha256','utf8');}
+  catch (_) {return false;}
+  const expected=data.match(/^([0-9a-f]{64})[ \t]+/)?.[1];
+  if(!expected)return false;
+  const actual=await new Promise((resolve,reject)=>{
+    const crypto=require('node:crypto');
+    const hash=crypto.createHash('sha256');
+    const stream=fs.createReadStream(snapshot.fullPath);
+    stream.on('data',chunk=>hash.update(chunk));
+    stream.on('error',reject);
+    stream.on('end',()=>resolve(hash.digest('hex')));
+  });
+  return expected===actual;
+}
+
+module.exports={latestSnapshot,verifySnapshot,SNAPSHOT_NAME,MAX_DOWNLOAD_BYTES};
