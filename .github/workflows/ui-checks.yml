@@ -70,6 +70,15 @@ jobs:
         run: docker build --pull -t star-kali-terminal:ci .
       - name: Verify terminal uses Node.js 24
         run: docker run --rm --entrypoint node star-kali-terminal:ci -e 'if(process.versions.node.split(".")[0]!=="24")process.exit(1);console.log(process.version)'
+      - name: Verify isolated Python 3.12 and unchanged Python 3.11
+        run: |
+          docker run --rm --entrypoint /bin/bash star-kali-terminal:ci -lc '
+            set -euo pipefail
+            /usr/local/bin/python3.12 -c "import sys,ssl,sqlite3,venv,ensurepip; assert sys.version_info[:2] == (3,12)"
+            /usr/bin/python3 -c "import sys; assert sys.version_info[:2] == (3,11)"
+            /usr/local/bin/python3.12 -m ensurepip --version
+            echo "Both isolated Python 3.12 and system Python 3.11 verified"
+          '
       - name: Exercise authenticated real HTTP grading and persistence
         run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/training-http.sh
       - name: Real HTTP owner tools catalog, AI dispatch and persistent results
