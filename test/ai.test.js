@@ -298,3 +298,49 @@ test('selfhosted provider never uses remote endpoint when inactive or unapproved
   await assert.rejects(provider.askAI('Hello',{env,fetchFn:async()=>{requests++;}}),/AI_NOT_CONFIGURED/);
   assert.equal(requests,0);
 });
+
+test('Cloudflare Access service credentials are transmitted only to pinned self-hosted host',async()=>{
+  const env={
+    AI_ENABLED:'1',AI_PROVIDER:'selfhosted',AI_MODEL:'star-selfhost',
+    AI_SELFHOST_URL:'https://inference.example.com/v1/chat/completions',
+    AI_SELFHOST_ALLOWED_HOST:'inference.example.com',
+    AI_SELFHOST_API_KEY:'my-private-GPU-bearer-key-0123456789',
+    AI_SELFHOST_CF_CLIENT_ID:'123456789abcdef.access',
+    AI_SELFHOST_CF_CLIENT_SECRET:'12345678901234567890_access_secret',
+  };
+  assert.equal(provider.isConfigured(env),true);
+  let calls=0;
+  const result=await provider.askAI('Hello',{env,fetchFn:async(url,init)=>{
+    calls++;
+    assert.equal(url,env.AI_SELFHOST_URL);
+    assert.equal(init.headers['CF-Access-Client-Id'],env.AI_SELFHOST_CF_CLIENT_ID);
+    assert.equal(init.headers['CF-Access-Client-Secret'],env.AI_SELFHOST_CF_CLIENT_SECRET);
+    assert.equal(init.headers.Authorization,'Bearer '+env.AI_SELFHOST_API_KEY);
+    return {ok:true,json:async()=>({choices:[{message:{content:'Hello'}}]})};
+  }});
+  assert.equal(result,'Hello');
+  assert.equal(calls,1);
+
+  for(const broken of [
+    {...env,AI_SELFHOST_CF_CLIENT_SECRET:''},
+    {...env,AI_SELFHOST_CF_CLIENT_ID:''},
+    {...env,AI_SELFHOST_CF_CLIENT_ID:'x\r\nbad'},
+    {...env,AI_SELFHOST_CF_CLIENT_SECRET:'short'},
+  ]){
+    assert.equal(provider.isConfigured(broken),false);
+  }
+  assert.equal(provider.accessHeaders({}),Object({}));
+  const openAi={...aiEnv,AI_ENABLED:'1'};
+  const kimi={...aiEnv,AI_ENABLED:'1',AI_PROVIDER:'kimi',AI_MODEL:'kimi-k3.1-pro'};
+  for(const other of [openAi,kimi]){
+    await provider.askAI('Hello',{env:{...other,...{
+      AI_SELFHOST_CF_CLIENT_ID:env.AI_SELFHOST_CF_CLIENT_ID,
+      AI_SELFHOST_CF_CLIENT_SECRET:env.AI_SELFHOST_CF_CLIENT_SECRET,
+    }},fetchFn:async(url,init)=>{
+      assert.equal(init.headers['CF-Access-Client-Id'],undefined);
+      assert.equal(init.headers['CF-Access-Client-Secret'],undefined);
+      if(url===provider.AI_ENDPOINT)return {ok:true,json:async()=>({output_text:'yes'})};
+      return {ok:true,json:async()=>({choices:[{message:{content:'yes'}}]})};
+    }});
+  }
+});
