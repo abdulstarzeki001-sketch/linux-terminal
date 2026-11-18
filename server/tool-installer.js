@@ -4,7 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {TOOLS, snapshot} = require('./tool-ops');
-const {catalogState,PACKAGES}=require('./tool-install-runner');
+const {catalogState}=require('./tool-install-runner');
 
 const PLANS = Object.freeze({
   certipy:{kind:'pip',package:'certipy-ad',command:'$HOME/.venv/bin/python -m pip install certipy-ad',compatibility:'Linux; isolated Python venv',risk:'medium'},
