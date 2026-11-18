@@ -97,3 +97,16 @@ persist check         # check current apps, volume link and package restoration
 **User tool repair:** `persist repair-user` is explicit because it contacts public Python/npm registries and npm packages can run code when installed. Only valid package names and pinned numeric version strings from the owner-created inventory are accepted, and npm install runs with `--ignore-scripts` to reduce lifecycle risk. The command does not run at startup, does not replace a broken venv automatically, and does not modify system APT packages. Use `persist repair` for APT failures instead.
 
 The real Docker integration test creates multiple independent containers with one shared throwaway volume, validates the exported archive and checksum and confirms project `.env` exclusion. A successful test is not proof of offsite backup availability.
+
+## Worker-origin authentication on the public Railway domain
+
+The Railway-generated domain must not allow direct access to the shell UI or `/ws` just because the visitor knows the original `TERMINAL_PASSWORD`. Wormstar Cloudflare Access is the public owner entrypoint. A second, long, randomly generated secret is transmitted only as `X-Star-Edge-Origin` from the Cloudflare Worker to Railway.
+
+- `TERMINAL_EDGE_ORIGIN_SECRET` is configured as a secret separately on both Cloudflare Worker `wormstar-ai-lab` and Railway service `terminal`; never store or print its value in the repository, the UI, logs or the terminal shell.
+- The server only enforces this credential when Railway `TERMINAL_EDGE_MODE=enforce`; keep this OFF while deploying code/secret values, then enable after successful Worker rollout.
+- Once enforced, Railway `GET /` and unauthenticated `/ws` upgrades return `403` even if an attacker has the old terminal password. `GET /health` remains anonymous for Railway's own healthcheck.
+- A valid owner session in Wormstar must still receive a short-lived signed Worker ticket. Worker makes the upstream connection with its private header and authenticates the Railway WebSocket with the pre-existing `TERMINAL_RAILWAY_PASSWORD` secret.
+- If the origin secret is missing in enforcement mode, Railway exits instead of silently exposing the shell. Roll back by removing `TERMINAL_EDGE_MODE` *only after* investigating the root cause; avoid leaving the public direct origin password-only.
+- Validate after activation: anonymous `GET https://terminal-production-fb16bd35.up.railway.app/` returns `403`; Railway `/health` returns `200`; authenticated Wormstar `/terminal/` connects via Cloudflare.
+
+**Scope and limits:** This protects HTTP and WebSocket access to the Railway origin. It does not change how the shell uses `sudo` *inside the isolated container*. This is a complementary origin gate, not a replacement for Cloudflare Access or a hardened sandbox.
