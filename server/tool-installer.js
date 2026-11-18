@@ -7,10 +7,10 @@ const {TOOLS, snapshot} = require('./tool-ops');
 const {catalogState}=require('./tool-install-runner');
 
 const PLANS = Object.freeze({
-  certipy:{kind:'pip',package:'certipy-ad',command:'$HOME/.venv/bin/python -m pip install certipy-ad',compatibility:'Linux; isolated Python venv',risk:'medium'},
-  impacket:{kind:'pip',package:'impacket',command:'$HOME/.venv/bin/python -m pip install impacket',compatibility:'Linux; isolated Python venv',risk:'medium'},
+  certipy:{kind:'pip',package:'certipy-ad',command:'$HOME/.venv/bin/python -m pip install certipy-ad==5.1.0',compatibility:'Linux; requires Python 3.12+ for Certipy 5.1.0',risk:'medium'},
+  impacket:{kind:'pip',package:'impacket',command:'$HOME/.venv/bin/python -m pip install impacket==0.13.1',compatibility:'Linux; isolated Python venv',risk:'medium'},
   netexec:{kind:'manual',package:'netexec',command:null,compatibility:'Kali repository package; Railway image is Debian, verify approved isolated installation method',risk:'high'},
-  frida:{kind:'pip',package:'frida-tools',command:'$HOME/.venv/bin/python -m pip install frida-tools',compatibility:'Linux; isolated Python venv',risk:'medium'},
+  frida:{kind:'pip',package:'frida-tools',command:'$HOME/.venv/bin/python -m pip install frida-tools==14.13.2',compatibility:'Linux; isolated Python venv',risk:'medium'},
   aflpp:{kind:'apt',package:'afl++',command:'sudo apt-get install --no-install-recommends afl++',compatibility:'Debian/Kali supported package availability varies',risk:'medium'},
   ghidra:{kind:'manual',package:null,command:null,compatibility:'Needs JDK and headless or GUI architecture; separate image recommended',risk:'high'}
 });
@@ -33,7 +33,7 @@ const PROFILES=Object.freeze({
   havoc:{target:'isolated_linux_vm',readiness:'separate_environment',requirements:['Dedicated Linux graphical VM','Compiler and GUI dependencies','Isolated authorized range']},
   caldera:{target:'isolated_linux_service',readiness:'separate_environment',requirements:['Dedicated application service','Python environment and required plugins','Isolated training targets']},
   bloodhound:{target:'dedicated_container_stack',readiness:'separate_environment',requirements:['BloodHound CE application container','Dedicated database and persistent storage','RAM and private service authentication']},
-  certipy:{target:'railway_python_venv',readiness:'owner_approved',requirements:['Persistent Python virtual environment','Owner confirmation','At least 250 MiB free volume space']},
+  certipy:{target:'railway_python_venv',readiness:'owner_approved',requirements:['Python 3.12 or newer required (Debian Bookworm defaults to 3.11)','Persistent Python virtual environment','Owner confirmation','At least 250 MiB free volume space']},
   impacket:{target:'railway_python_venv',readiness:'owner_approved',requirements:['Persistent Python virtual environment','Owner confirmation','At least 250 MiB free volume space']},
   netexec:{target:'dedicated_kali_vm',readiness:'manual_review',requirements:['Kali or supported distribution','Package compatibility and dependency review','Authorized isolated range']},
   rubeus:{target:'windows_vm',readiness:'incompatible_railway_linux',requirements:['Dedicated Windows laboratory VM','Authorization for identity testing','Local-only execution']},
@@ -69,6 +69,7 @@ function getCatalog(opts={}){
     persistence:persist,
     jobs:installs.jobs,
     busy:installs.busy,
+    pythonVersion:installs.pythonVersion,
     summary:{total:snap.tools.length,installed:snap.tools.filter(x=>x.installed).length,
      missing:snap.tools.filter(x=>!x.installed).length,
      automatedInstallsEnabled:true,approvedTools:installs.approvedTools},
@@ -81,6 +82,8 @@ function getCatalog(opts={}){
         target:profile.target,
         readiness:profile.readiness,
         requirements:profile.requirements,
+        canInstall:installs.approvedTools.includes(t.id)&&!(t.id==='certipy'&&!installs.certipyPythonReady),
+        blockedReason:t.id==='certipy'&&!installs.certipyPythonReady?'INSTALL_PYTHON_VERSION_UNSUPPORTED':null,
         package:plan?.package||null,
         command:plan?.command||null,
         compatibility:plan?.compatibility||LEGACY[t.id]||'Manual review required',

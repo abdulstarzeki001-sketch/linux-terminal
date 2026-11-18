@@ -6,7 +6,7 @@
  */
 const fs=require('node:fs');
 const path=require('node:path');
-const {spawn}=require('node:child_process');
+const {spawn,execFileSync}=require('node:child_process');
 
 const APPROVAL='I_APPROVE_RAILWAY_TOOL_INSTALL';
 const HOME='/home/tuser';
@@ -26,6 +26,26 @@ const APT_TOOL='aflpp';
 const APT_SCRIPT='/usr/local/bin/wormstar-install-afl';
 const APPROVED_IDS=Object.freeze([...Object.keys(PACKAGES),APT_TOOL]);
 const MIN_ROOT_FREE_BYTES=750*1024*1024;
+function readPythonVersion(python=PYTHON,opts={}){
+ if(typeof opts.pythonVersion==='string')return opts.pythonVersion;
+ try {
+  const output=execFileSync(python,['--version'],{
+   timeout:1500,maxBuffer:128,encoding:'utf8',windowsHide:true,
+   env:{PATH:'/usr/local/bin:/usr/bin:/bin',LANG:'C'}
+  });
+  const match=String(output).match(/Python\s+(\d+\.\d+(?:\.\d+)?)/);
+  return match?match[1]:null;
+ }catch(_){return null;}
+}
+function supportsCertipyPython(version){
+ const m=String(version||'').match(/^(\d+)\.(\d+)(?:\.\d+)?$/);
+ return !!m && (Number(m[1])>3 || Number(m[1])===3&&Number(m[2])>=12);
+}
+function verifyInstalled(toolId){
+ // pip exit 0 is not proof: require the actual live Railway tool inventory.
+ const {snapshot}=require('./tool-ops');
+ return !!snapshot().tools.find(t=>t.id===toolId)?.installed;
+}
 let active=null;
 let lastStarted=0;
 
@@ -91,6 +111,12 @@ function startInstall(input,opts={}){
  let env;
  try{env=prerequisites(opts);}catch(_){return {httpStatus:503,code:'INSTALL_ENVIRONMENT_UNAVAILABLE'};}
  if(!env.ok)return {httpStatus:503,code:env.code,freeBytes:env.freeBytes};
+ if(toolId==='certipy'){
+  const pythonVersion=readPythonVersion(env.python,opts);
+  if(!supportsCertipyPython(pythonVersion))
+   return {httpStatus:409,code:'INSTALL_PYTHON_VERSION_UNSUPPORTED',
+    pythonVersion,requiredPython:'3.12'};
+ }
  let program=env.python;
  let command=[ '-m','pip','--isolated','install','--disable-pip-version-check',
    '--no-input','--no-cache-dir','--only-binary=:all:',PACKAGES[toolId] ];
@@ -133,7 +159,13 @@ function startInstall(input,opts={}){
  function finish(code){
   if(ended)return;
   ended=true;clearTimeout(timer);active=null;
-  job.status=timedOut?'timed_out':code===0?'succeeded':'failed';
+  let executableVerified=false;
+  if(!timedOut&&code===0){
+   try{executableVerified=!!(opts.verifyFn||verifyInstalled)(toolId);}
+   catch(_){executableVerified=false;}
+   if(!executableVerified)append('Installer exited with code 0, but no executable was detected in the live Railway inventory.');
+  }
+  job.status=timedOut?'timed_out':code===0&&executableVerified?'succeeded':'failed';
   job.exitCode=Number.isInteger(code)?code:null;
   job.output=output;job.finishedAt=new Date().toISOString();
   try{writeJobs({...readJobs(opts),[toolId]:job},opts);}catch(e){
@@ -147,6 +179,10 @@ function startInstall(input,opts={}){
  timer.unref?.();
  return {httpStatus:202,job:{...job},freeBytes:env.freeBytes};
 }
-function catalogState(opts){return {jobs:readJobs(opts),busy:active!==null,
- autoInstallPolicy:'owner_approved_pinned_pip_or_fixed_apt',approvedTools:APPROVED_IDS};}
-module.exports={APPROVAL,PACKAGES,APT_TOOL,APPROVED_IDS,MIN_FREE_BYTES,MIN_ROOT_FREE_BYTES,readJobs,catalogState,startInstall,prerequisites};
+function catalogState(opts){
+ const pyVersion=readPythonVersion(opts?.python||PYTHON,opts);
+ return {jobs:readJobs(opts),busy:active!==null,
+  pythonVersion:pyVersion,certipyPythonReady:supportsCertipyPython(pyVersion),
+  autoInstallPolicy:'owner_approved_pinned_pip_or_fixed_apt',approvedTools:APPROVED_IDS};
+}
+module.exports={APPROVAL,PACKAGES,APT_TOOL,APPROVED_IDS,MIN_FREE_BYTES,MIN_ROOT_FREE_BYTES,readJobs,catalogState,startInstall,prerequisites,readPythonVersion,supportsCertipyPython};
