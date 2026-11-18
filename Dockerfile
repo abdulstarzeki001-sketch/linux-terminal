@@ -34,6 +34,7 @@ RUN npm install --omit=dev
 
 COPY server/index.js ./
 COPY server/edge-guard.js ./
+COPY server/backup-export.js ./
 COPY server/ai.js ./
 COPY server/boot-audit.js ./
 COPY server/kali-shell.sh /usr/local/share/wormstar-kali-shell.sh
