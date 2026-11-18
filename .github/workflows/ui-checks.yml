@@ -46,6 +46,9 @@ jobs:
           bash -n test/persistence-redeploy.sh
           bash -n test/training-http.sh
           bash -n test/tool-ops-http.sh
+          bash -n test/tool-maintenance-http.sh
+          node --check server/tool-maintenance.js
+          node --check server/tool-diagnostics.js
           node --check server/tool-ops.js
           bash -n server/apt-wrapper.sh
           bash -n server/persist-cli.sh
@@ -74,6 +77,8 @@ jobs:
         run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/training-http.sh
       - name: Real HTTP owner tools catalog, AI dispatch and persistent results
         run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/tool-ops-http.sh
+      - name: Verify owner diagnostics and bounded installer routes over real HTTP
+        run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/tool-maintenance-http.sh
       - name: Verify bundled Python API and loopback client
         run: |
           docker run --rm --entrypoint /bin/bash star-kali-terminal:ci -lc 'PYTHONPATH=/opt/kali-osint-star/services/api /opt/star-kali-venv/bin/python -c "from app.main import app; print(app.version)"'
