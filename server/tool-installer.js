@@ -45,6 +45,7 @@ function getCatalog(opts={}){
     mode:'inventory_and_owner_install_plans',
     checkedAt:new Date().toISOString(),
     persistence:persist,
+    summary:{total:snap.tools.length,installed:snap.tools.filter(t=>t.installed).length,missing:snap.tools.filter(t=>!t.installed).length,automatedInstallsEnabled:false},
     tools:snap.tools.map(t=>{
       const plan=PLANS[t.id];
       return {...t,install:{
