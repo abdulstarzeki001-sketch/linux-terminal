@@ -55,6 +55,16 @@ if [[ -x "$CERTIPY_ENV/bin/python" ]]; then
   fi
 fi
 
+# Immutable Certipy release installed during Docker build (not through browser).
+# Verify it exists at runtime and emit a verifiable, secret-free health marker.
+if [[ -x /opt/certipy-ad312/bin/certipy ]] &&
+   gosu tuser /opt/certipy-ad312/bin/python -c 'import sys,importlib.metadata as m; assert sys.version_info[:2] == (3,12); assert m.version("certipy-ad") == "5.1.0"' >/dev/null 2>&1; then
+  echo "[STAR TOOLS] CERTIPY_AD=5.1.0 PYTHON=3.12 EXECUTABLE=/opt/certipy-ad312/bin/certipy VERIFIED"
+else
+  echo "[STAR TOOLS] ERROR: immutable Certipy runtime verification failed" >&2
+  exit 1
+fi
+
 # The package manager is ephemeral, while its extra-package manifest is
 # persistent. Restoration is bounded; failure never hides the owner's files.
 if ! /usr/local/bin/wormstar-restore-packages; then
