@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const os=require('node:os');
 const path=require('node:path');
-const {getCatalog,verifyManifest}=require('../server/tool-installer');
+const {getCatalog,verifyManifest,PROFILES}=require('../server/tool-installer');
 test('all 15 receive explicit install policy and no program is started',()=>{
  const c=getCatalog({root:'/this-path-does-not-exist',snapshot:{tools:[
  'mythic','sliver','havoc','caldera','bloodhound','certipy','impacket','netexec',
@@ -16,6 +16,14 @@ test('all 15 receive explicit install policy and no program is started',()=>{
  assert.equal(c.tools.find(t=>t.id==='netexec').install.policy,'manual_review');
  assert.equal(c.tools.find(t=>t.id==='certipy').install.policy,'owner_one_click');
  assert.equal(c.summary.automatedInstallsEnabled,true);
+ assert.equal(Object.keys(PROFILES).length,15);
+ assert.deepEqual([...c.summary.approvedTools].sort(),['aflpp','certipy','frida','impacket']);
+ assert.ok(c.tools.every(t=>Array.isArray(t.install.requirements)&&t.install.requirements.length));
+ assert.ok(c.tools.every(t=>typeof t.install.target==='string' && typeof t.install.readiness==='string'));
+ assert.equal(c.tools.find(t=>t.id==='aflpp').install.policy,'owner_one_click');
+ assert.equal(c.tools.find(t=>t.id==='mimikatz').install.readiness,'incompatible_railway_linux');
+ assert.equal(c.tools.find(t=>t.id==='syzkaller').install.target,'dedicated_kernel_vm');
+ assert.equal(c.tools.find(t=>t.id==='bloodhound').install.target,'dedicated_container_stack');
 });
 test('persistent APT inventory is read, filtered, and never interpreted as shell',()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'star-installer-'));

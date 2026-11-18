@@ -15,11 +15,17 @@ const PYTHON=path.join(HOME,'.venv/bin/python');
 const STATE_PATH=path.join(HOME,'.config/wormstar/owner-installs.json');
 const MIN_FREE_BYTES=250*1024*1024;
 const MAX_DURATION_MS=300000;
+const APT_DURATION_MS=750000;
 const PACKAGES=Object.freeze({
   certipy:'certipy-ad==5.1.0',
   impacket:'impacket==0.13.1',
   frida:'frida-tools==14.13.2'
 });
+// apt is a separate fixed root-owned script; it does not accept package names.
+const APT_TOOL='aflpp';
+const APT_SCRIPT='/usr/local/bin/wormstar-install-afl';
+const APPROVED_IDS=Object.freeze([...Object.keys(PACKAGES),APT_TOOL]);
+const MIN_ROOT_FREE_BYTES=750*1024*1024;
 let active=null;
 let lastStarted=0;
 
@@ -34,7 +40,7 @@ function readJobs(opts){
    jobs=doc.jobs;
  }catch(e){if(e?.code!=='ENOENT')jobs={};}
  const sanitized={};
- for(const id of Object.keys(PACKAGES)){
+ for(const id of APPROVED_IDS){
   const job=jobs[id];
   if(!job||typeof job!=='object')continue;
   const status=(job.status==='running'&&active!==id)?'interrupted':job.status;
@@ -77,7 +83,7 @@ function startInstall(input,opts={}){
     input.approval!==APPROVAL || typeof input.tool_id!=='string')
   return {httpStatus:400,code:'INSTALL_APPROVAL_REQUIRED'};
  const toolId=input.tool_id;
- if(!Object.hasOwn(PACKAGES,toolId))
+ if(!APPROVED_IDS.includes(toolId))
   return {httpStatus:403,code:'INSTALL_TOOL_NOT_APPROVED'};
  if(active)return {httpStatus:409,code:'INSTALL_BUSY'};
  if(Date.now()-lastStarted<2000&&!opts.noThrottle)
@@ -85,6 +91,22 @@ function startInstall(input,opts={}){
  let env;
  try{env=prerequisites(opts);}catch(_){return {httpStatus:503,code:'INSTALL_ENVIRONMENT_UNAVAILABLE'};}
  if(!env.ok)return {httpStatus:503,code:env.code,freeBytes:env.freeBytes};
+ let program=env.python;
+ let command=[ '-m','pip','--isolated','install','--disable-pip-version-check',
+   '--no-input','--no-cache-dir','--only-binary=:all:',PACKAGES[toolId] ];
+ if(toolId===APT_TOOL){
+  try{
+   const script=opts.aptScript||APT_SCRIPT;
+   const stat=fs.statSync(script);
+   const freeRoot=opts.rootFreeBytes===undefined?freeBytes('/'):opts.rootFreeBytes;
+   if(!stat.isFile() || !(stat.mode&0o111) || stat.uid!==0)
+    return {httpStatus:503,code:'INSTALL_APT_SCRIPT_UNTRUSTED'};
+   if(freeRoot<MIN_ROOT_FREE_BYTES)
+    return {httpStatus:503,code:'INSTALL_ROOT_DISK_SPACE_LOW',freeBytes:freeRoot};
+   program=opts.sudoPath||'/usr/bin/sudo';
+   command=['-n',script];
+  }catch(_){return {httpStatus:503,code:'INSTALL_APT_NOT_READY'};}
+ }
  const existing=readJobs(opts);
  if(existing[toolId]?.status==='succeeded'&&!opts.force)
   return {httpStatus:409,code:'INSTALL_ALREADY_SUCCEEDED',job:existing[toolId]};
@@ -92,11 +114,9 @@ function startInstall(input,opts={}){
    finishedAt:null,exitCode:null,output:''};
  try{writeJobs({...existing,[toolId]:job},opts);}
  catch(_){return {httpStatus:503,code:'INSTALL_STATE_UNWRITABLE'};}
- const command=[ '-m','pip','--isolated','install','--disable-pip-version-check',
-   '--no-input','--no-cache-dir','--only-binary=:all:',PACKAGES[toolId] ];
  let child;
  try{
-  child=(opts.spawnFn||spawn)(env.python,command,{
+  child=(opts.spawnFn||spawn)(program,command,{
    cwd:env.home,shell:false,windowsHide:true,stdio:['ignore','pipe','pipe'],
    env:{HOME:env.home,PATH:'/usr/local/bin:/usr/bin:/bin',
     LANG:'C.UTF-8',LC_ALL:'C.UTF-8',PYTHONNOUSERSITE:'1',PIP_NO_INPUT:'1'}
@@ -123,10 +143,10 @@ function startInstall(input,opts={}){
  child.stdout?.on('data',append);child.stderr?.on('data',append);
  child.on('error',e=>{append('Installer launch failed: '+(e?.code||'UNKNOWN'));finish(null);});
  child.on('close',finish);
- timer=setTimeout(()=>{timedOut=true;try{child.kill('SIGKILL');}catch(_){finish(null);}},MAX_DURATION_MS);
+ timer=setTimeout(()=>{timedOut=true;try{child.kill('SIGKILL');}catch(_){finish(null);}},toolId===APT_TOOL?APT_DURATION_MS:MAX_DURATION_MS);
  timer.unref?.();
  return {httpStatus:202,job:{...job},freeBytes:env.freeBytes};
 }
 function catalogState(opts){return {jobs:readJobs(opts),busy:active!==null,
- autoInstallPolicy:'owner_approved_pinned_pip_only',approvedTools:Object.keys(PACKAGES)};}
-module.exports={APPROVAL,PACKAGES,MIN_FREE_BYTES,readJobs,catalogState,startInstall,prerequisites};
+ autoInstallPolicy:'owner_approved_pinned_pip_or_fixed_apt',approvedTools:APPROVED_IDS};}
+module.exports={APPROVAL,PACKAGES,APT_TOOL,APPROVED_IDS,MIN_FREE_BYTES,MIN_ROOT_FREE_BYTES,readJobs,catalogState,startInstall,prerequisites};

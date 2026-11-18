@@ -4,7 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {TOOLS, snapshot} = require('./tool-ops');
-const {catalogState,PACKAGES}=require('./tool-install-runner');
+const {catalogState}=require('./tool-install-runner');
 
 const PLANS = Object.freeze({
   certipy:{kind:'pip',package:'certipy-ad',command:'$HOME/.venv/bin/python -m pip install certipy-ad',compatibility:'Linux; isolated Python venv',risk:'medium'},
@@ -25,6 +25,26 @@ const LEGACY = Object.freeze({
   ligolo:'Network tunnel tool: inventory only; requires approved range.',
   syzkaller:'Kernel fuzzing requires its own VM and privileged kernel lab.'
 });
+// Every card receives a real target/runtime plan, including non-railway tools.
+// This is not permission to install or start C2, credential dumping or tunnelling tools.
+const PROFILES=Object.freeze({
+  mythic:{target:'isolated_linux_service',readiness:'separate_environment',requirements:['Dedicated isolated Linux host','Container runtime and database','Private range-only network and access policy']},
+  sliver:{target:'isolated_linux_vm',readiness:'separate_environment',requirements:['Dedicated Linux range VM','Host-only network isolation','Explicit lab change approval']},
+  havoc:{target:'isolated_linux_vm',readiness:'separate_environment',requirements:['Dedicated Linux graphical VM','Compiler and GUI dependencies','Isolated authorized range']},
+  caldera:{target:'isolated_linux_service',readiness:'separate_environment',requirements:['Dedicated application service','Python environment and required plugins','Isolated training targets']},
+  bloodhound:{target:'dedicated_container_stack',readiness:'separate_environment',requirements:['BloodHound CE application container','Dedicated database and persistent storage','RAM and private service authentication']},
+  certipy:{target:'railway_python_venv',readiness:'owner_approved',requirements:['Persistent Python virtual environment','Owner confirmation','At least 250 MiB free volume space']},
+  impacket:{target:'railway_python_venv',readiness:'owner_approved',requirements:['Persistent Python virtual environment','Owner confirmation','At least 250 MiB free volume space']},
+  netexec:{target:'dedicated_kali_vm',readiness:'manual_review',requirements:['Kali or supported distribution','Package compatibility and dependency review','Authorized isolated range']},
+  rubeus:{target:'windows_vm',readiness:'incompatible_railway_linux',requirements:['Dedicated Windows laboratory VM','Authorization for identity testing','Local-only execution']},
+  mimikatz:{target:'windows_vm',readiness:'incompatible_railway_linux',requirements:['Dedicated Windows VM','Privileged lab access','Sensitive credential handling controls']},
+  ligolo:{target:'isolated_network_range',readiness:'separate_environment',requirements:['Separate relay host and isolated range','Explicit network route approval','No public proxy deployment']},
+  frida:{target:'railway_python_venv',readiness:'owner_approved',requirements:['Persistent Python virtual environment','Owner confirmation','External device instrumentation requires separate approval']},
+  ghidra:{target:'dedicated_analysis_vm',readiness:'manual_review',requirements:['Java runtime appropriate to selected Ghidra release','Large persistent workspace','Separate analysis VM recommended']},
+  aflpp:{target:'railway_debian_apt',readiness:'owner_approved',requirements:['Signed Debian package repository','Owner confirmation','At least 750 MiB free root filesystem and 250 MiB free persistent volume']},
+  syzkaller:{target:'dedicated_kernel_vm',readiness:'incompatible_railway_linux',requirements:['Dedicated kernel fuzzing VM','Controlled kernel snapshot and recovery','Privileged VM host unavailable in Railway terminal']}
+});
+
 const SAFE_NAMES=/^[a-zA-Z0-9][a-zA-Z0-9+._:-]*$/;
 function stateDir(root=process.env.WORMSTAR_PERSIST_ROOT||'/persist'){
   return path.join(root,'state');
@@ -54,17 +74,21 @@ function getCatalog(opts={}){
      automatedInstallsEnabled:true,approvedTools:installs.approvedTools},
     tools:snap.tools.map(t=>{
       const plan=PLANS[t.id];
+      const profile=PROFILES[t.id];
       return {...t,install:{
-        policy:plan?plan.kind==='manual'?'manual_review':Object.hasOwn(PACKAGES,t.id)?'owner_one_click':'owner_terminal_approval':'separate_lab',
-        method:plan?.kind||'unsupported',
+        policy:installs.approvedTools.includes(t.id)?'owner_one_click':profile.readiness==='manual_review'?'manual_review':'separate_lab',
+        method:plan?.kind||'separate_lab',
+        target:profile.target,
+        readiness:profile.readiness,
+        requirements:profile.requirements,
         package:plan?.package||null,
         command:plan?.command||null,
         compatibility:plan?.compatibility||LEGACY[t.id]||'Manual review required',
         requiresApproval:true,
         executed:installs.jobs[t.id]?.status==='succeeded',
-        installedByManager:installs.jobs[t.id]?.status==='succeeded'
+        installedByManager:installs.jobs[t.id]?.status==='succeeded'&&!!t.installed
       }};
     })
   };
 }
-module.exports={PLANS,getCatalog,verifyManifest};
+module.exports={PLANS,PROFILES,getCatalog,verifyManifest};
