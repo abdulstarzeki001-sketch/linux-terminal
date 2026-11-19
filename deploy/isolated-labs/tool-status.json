@@ -38,7 +38,19 @@
       "name": "BloodHound CE",
       "profile": "database_stack",
       "status": "not_provisioned",
-      "reason": "Official BloodHound CE application, PostgreSQL and Neo4j required"
+      "reason": "Official BloodHound CE application, PostgreSQL and Neo4j required",
+      "validation": {
+        "mode": "ephemeral_private_cloud_runtime",
+        "result": "passed",
+        "at": "2026-11-19",
+        "loginHTTP": 200,
+        "databaseHealth": "healthy",
+        "graphHealth": "healthy",
+        "appHealth": "healthy",
+        "publicPorts": false,
+        "persistentDeployment": false,
+        "workflowRun": "https://github.com/abdulstarzeki001-sketch/linux-terminal/actions/runs/44453942326"
+      }
     },
     {
       "id": "netexec",
