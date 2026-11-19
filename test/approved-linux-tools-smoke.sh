@@ -41,7 +41,8 @@ const required={
   impacket:'impacket-lookupsid',
   frida:'frida',
   aflpp:'afl-fuzz',
-  netexec:'nxc'
+  netexec:'nxc',
+  ligolo:'ligolo-proxy'
 };
 if(list.length!==15)throw Error('Expected original catalog of 15 tools');
 for (const [id,executable] of Object.entries(required)) {
@@ -52,7 +53,7 @@ for (const [id,executable] of Object.entries(required)) {
   console.log('[INVENTORY] '+id+' installed, executable='+executable);
 }
 const installed=list.filter(t=>t.installed);
-if(installed.length!==5)throw Error('Unexpected installed tool count: '+installed.length);
-console.log('[INVENTORY] 5/15 real tools installed');
+if(installed.length!==6)throw Error('Unexpected installed tool count: '+installed.length);
+console.log('[INVENTORY] 6/15 real tools installed');
 JS
 echo "PASS: pinned NetExec, Certipy, Impacket, Frida and AFL++ binaries and catalog verified"
