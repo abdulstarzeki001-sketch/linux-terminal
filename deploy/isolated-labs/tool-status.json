@@ -82,5 +82,31 @@
       "status": "not_provisioned",
       "reason": "QEMU/KCOV custom kernel VM; not supported in ordinary Railway container"
     }
+  ],
+  "railwayProduction": {
+    "verifiedAt": "2026-11-19",
+    "installedCount": 8,
+    "totalCount": 15,
+    "tools": [
+      "certipy",
+      "impacket",
+      "frida",
+      "aflpp",
+      "netexec",
+      "ligolo",
+      "syzkaller",
+      "ghidra"
+    ],
+    "latestVerifiedCommit": "c406f3ef5a222942184c6969a7219b5085019d49",
+    "meaning": "Only executable-level inventory in Railway; not all full lab services are operational"
+  },
+  "remainingSeven": [
+    "mythic",
+    "sliver",
+    "havoc",
+    "caldera",
+    "bloodhound",
+    "rubeus",
+    "mimikatz"
   ]
 }
