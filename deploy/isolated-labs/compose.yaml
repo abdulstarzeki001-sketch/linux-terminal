@@ -1,0 +1,55 @@
+# START SAFE: no published TCP ports, no public domains, no privileged
+# containers, no Docker socket mounts, no network access at runtime.
+# Build uses trusted Kali official repository; run is offline and interactive.
+name: star-isolated-labs
+services:
+  kali-audit:
+    profiles: ["audit"]
+    build:
+      context: ./kali-audit
+      dockerfile: Dockerfile
+    image: star-isolated-kali-audit:local
+    user: "10001:10001"
+    read_only: true
+    network_mode: none
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    mem_limit: 2g
+    cpus: "1.0"
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+    volumes:
+      - kali-work:/workspace
+    working_dir: /workspace
+    entrypoint: ["/bin/bash", "-lc"]
+    command: ["command -v nxc && command -v ligolo-proxy && echo 'OFFLINE_AUDIT_IMAGE_READY'"]
+    restart: "no"
+
+  ghidra-analysis:
+    profiles: ["analysis"]
+    build:
+      context: ./ghidra-analysis
+      dockerfile: Dockerfile
+    image: star-isolated-ghidra:local
+    user: "10001:10001"
+    read_only: true
+    network_mode: none
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 512
+    mem_limit: 6g
+    cpus: "2.0"
+    shm_size: 512m
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=512m
+    volumes:
+      - ghidra-work:/workspace
+    working_dir: /workspace
+    entrypoint: ["/bin/bash", "-lc"]
+    command: ["test -x /usr/local/bin/star-ghidra-headless && echo 'OFFLINE_GHIDRA_READY'"]
+    restart: "no"
+
+volumes:
+  kali-work:
+  ghidra-work:
