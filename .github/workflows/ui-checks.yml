@@ -40,7 +40,7 @@ jobs:
           bash -n server/kali-shell.sh
           bash -n server/run-with-kali.sh
           python3 -m py_compile server/star-kali.py
-          python3 -m py_compile local_worker/worker.py
+          python3 -m py_compile local_worker/worker.py local_worker/ai_controller.py
           bash -n server/entrypoint.sh
           bash -n server/apt-track.sh
           bash -n server/restore-packages.sh
@@ -65,7 +65,9 @@ jobs:
       - name: Check return navigation and existing login
         run: node --test test/*.test.js
       - name: Validate approval-gated local diagnostic worker (offline)
-        run: python3 -m unittest discover -s test -p 'test_local_worker.py' -v
+        run: |
+          python3 -m unittest discover -s test -p 'test_local_worker.py' -v
+          python3 -m unittest discover -s test -p 'test_ai_controller.py' -v
       - name: Verify self-hosted GPU Compose configuration (no GPU required)
         run: |
           docker compose -f deploy/selfhosted-gpu/compose.yml \
