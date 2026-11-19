@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "generatedFor": "STAR isolated labs",
+  "liveDeployment": false,
+  "authentication": "owner_only",
+  "networkPolicy": "no_public_ports_offline_by_default",
+  "tools": [
+    {
+      "id": "mythic",
+      "name": "Mythic C2",
+      "profile": "dedicated_c2_vm",
+      "status": "not_provisioned",
+      "reason": "Private isolated Linux host, database and dedicated authorization required"
+    },
+    {
+      "id": "sliver",
+      "name": "Sliver C2",
+      "profile": "dedicated_c2_vm",
+      "status": "not_provisioned",
+      "reason": "Host-only range VM required; no public listeners"
+    },
+    {
+      "id": "havoc",
+      "name": "Havoc",
+      "profile": "dedicated_c2_vm",
+      "status": "not_provisioned",
+      "reason": "Dedicated graphical Linux VM and isolated range required"
+    },
+    {
+      "id": "caldera",
+      "name": "MITRE CALDERA",
+      "profile": "isolated_service",
+      "status": "not_provisioned",
+      "reason": "Separate Docker service; private auth and adequate RAM required"
+    },
+    {
+      "id": "bloodhound",
+      "name": "BloodHound CE",
+      "profile": "database_stack",
+      "status": "not_provisioned",
+      "reason": "Official BloodHound CE application, PostgreSQL and Neo4j required"
+    },
+    {
+      "id": "netexec",
+      "name": "NetExec",
+      "profile": "kali_audit_offline",
+      "status": "image_definition_only",
+      "reason": "Dockerfile ready; no running service or authorized network target"
+    },
+    {
+      "id": "rubeus",
+      "name": "Rubeus",
+      "profile": "windows_lab_vm",
+      "status": "not_provisioned",
+      "reason": "Windows only; separate offline licensed test VM required"
+    },
+    {
+      "id": "mimikatz",
+      "name": "Mimikatz",
+      "profile": "windows_lab_vm",
+      "status": "not_provisioned",
+      "reason": "Windows credential research requires isolated VM and credential access controls"
+    },
+    {
+      "id": "ligolo",
+      "name": "Ligolo-ng",
+      "profile": "kali_audit_offline",
+      "status": "image_definition_only",
+      "reason": "Binary-only image; tunnel/proxy never starts by default"
+    },
+    {
+      "id": "ghidra",
+      "name": "Ghidra",
+      "profile": "ghidra_analysis_offline",
+      "status": "image_definition_only",
+      "reason": "Headless analysis image; needs dedicated RAM/disk for analysis"
+    },
+    {
+      "id": "syzkaller",
+      "name": "Syzkaller",
+      "profile": "kernel_qemu_vm",
+      "status": "not_provisioned",
+      "reason": "QEMU/KCOV custom kernel VM; not supported in ordinary Railway container"
+    }
+  ]
+}
