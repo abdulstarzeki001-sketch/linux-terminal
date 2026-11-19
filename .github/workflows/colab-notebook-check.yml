@@ -1,14 +1,16 @@
-name: Validate STAR AI Colab GPU Notebook
+name: Validate STAR AI Colab GPU Notebooks
 
 on:
   push:
     branches: [main]
     paths:
       - 'colab/STAR_AI_Qwen35_GPU_Colab.ipynb'
+      - 'colab/STAR_AI_ULTRA_A100_80GB.ipynb'
       - '.github/workflows/colab-notebook-check.yml'
   pull_request:
     paths:
       - 'colab/STAR_AI_Qwen35_GPU_Colab.ipynb'
+      - 'colab/STAR_AI_ULTRA_A100_80GB.ipynb'
       - '.github/workflows/colab-notebook-check.yml'
 
 permissions:
@@ -20,32 +22,36 @@ jobs:
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
-      - name: Verify notebook JSON and Python syntax without a GPU
+      - name: Check notebook JSON, Python syntax and networking safety (no GPU used)
         shell: bash
         run: |
           python3 - <<'PY'
           import ast, json
           from pathlib import Path
 
-          path = Path("colab/STAR_AI_Qwen35_GPU_Colab.ipynb")
-          nb = json.loads(path.read_text(encoding="utf-8"))
-          assert nb.get("nbformat") == 4
-          assert nb.get("metadata",{}).get("kernelspec",{}).get("name") == "python3"
-          cells = nb.get("cells",[])
-          assert sum(c["cell_type"] == "code" for c in cells) >= 5
-          code = ""
-          for i,c in enumerate(cells):
-              if c["cell_type"] != "code":
-                  continue
-              assert c.get("execution_count") is None, f"Execution count in cell {i}"
-              assert not c.get("outputs"), f"Notebook contains outputs in cell {i}"
-              src = "".join(c.get("source",[]))
-              ast.parse(src, filename=f"{path}:cell-{i}")
-              code += src + "\n"
-          assert '127.0.0.1:11434' in code
-          assert 'OLLAMA_HOST' in code
-          assert 'nvidia-smi' in code
-          for forbidden in ("ngrok", "cloudflared", "localtunnel", "0.0.0.0:11434"):
-              assert forbidden not in code, f"Unexpected external tunneling: {forbidden}"
-          print(f"Validated {len(cells)} notebook cells; all Python sources parse correctly.")
+          paths = [
+              Path("colab/STAR_AI_Qwen35_GPU_Colab.ipynb"),
+              Path("colab/STAR_AI_ULTRA_A100_80GB.ipynb"),
+          ]
+          for path in paths:
+              nb = json.loads(path.read_text(encoding="utf-8"))
+              assert nb.get("nbformat") == 4
+              assert nb.get("metadata", {}).get("kernelspec", {}).get("name") == "python3"
+              cells = nb.get("cells", [])
+              assert sum(c["cell_type"] == "code" for c in cells) >= 5
+              code = ""
+              for i, cell in enumerate(cells):
+                  if cell["cell_type"] != "code":
+                      continue
+                  assert cell.get("execution_count") is None, f"{path}: executed cell {i}"
+                  assert not cell.get("outputs"), f"{path}: outputs in cell {i}"
+                  src = "".join(cell.get("source", []))
+                  ast.parse(src, filename=f"{path}:cell-{i}")
+                  code += src + "\n"
+              assert "127.0.0.1:11434" in code
+              assert "OLLAMA_HOST" in code
+              assert "nvidia-smi" in code
+              for forbidden in ("ngrok", "cloudflared", "localtunnel", "0.0.0.0:11434"):
+                  assert forbidden not in code, f"{path}: external tunnel/bind {forbidden}"
+              print(f"PASS: {path}: {len(cells)} cells (syntax only; live GPU not checked)")
           PY
