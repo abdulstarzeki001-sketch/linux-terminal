@@ -23,7 +23,7 @@ const LEGACY = Object.freeze({
   rubeus:'Windows executable: not compatible with native Linux container.',
   mimikatz:'Credential access tooling: inventory only.',
   ligolo:'Network tunnel tool: the pinned CLI is image-bundled for read-only inventory. No proxy service or tunnel starts; a separate authorized range is required.',
-  syzkaller:'Kernel fuzzing requires its own VM and privileged kernel lab.'
+  syzkaller:'Pinned syz-manager CLI is installed locally; full kernel fuzzing remains disabled until dedicated QEMU/KCOV training VM is available.'
 });
 // Every card receives a real target/runtime plan, including non-railway tools.
 // This is not permission to install or start C2, credential dumping or tunnelling tools.
