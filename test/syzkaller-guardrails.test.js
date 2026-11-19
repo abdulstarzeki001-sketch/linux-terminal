@@ -17,3 +17,10 @@ test('Production startup only checks existence of syz-manager, never launches fu
  assert.match(entry,/\[\[ -x \/usr\/local\/bin\/syz-manager \]\]/);
  assert.doesNotMatch(entry,/gosu tuser \/usr\/local\/bin\/syz-manager/);
 });
+
+test('Binary-only Syzkaller profile requires dedicated QEMU/KCOV before real testing',()=>{
+ const {PROFILES}=require('../server/tool-installer');
+ assert.equal(PROFILES.syzkaller.target,'dedicated_kernel_vm');
+ assert.equal(PROFILES.syzkaller.readiness,'incompatible_railway_linux');
+ assert.ok(PROFILES.syzkaller.requirements.some(x=>/VM|kernel/i.test(x)));
+});
