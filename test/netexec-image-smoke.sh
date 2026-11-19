@@ -8,7 +8,7 @@ import importlib.metadata as m
 import sys
 assert sys.version_info[:2] == (3,12)
 assert m.version('netexec').startswith('1.5.1')
-assert m.version('dploot') == '3.1.2'
+assert m.version('dploot') == '3.2.2'
 print('[NETEXEC] pinned release 1.5.1 and constrained dependency verified')
 PY
 mkdir -p /tmp/star-nxc-owner
