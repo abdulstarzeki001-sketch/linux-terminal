@@ -73,7 +73,8 @@ jobs:
             /bin/bash -lc 'set -e; command -v nxc; command -v ligolo-proxy; dpkg-query -W netexec ligolo-ng; out="$(nxc --version 2>&1 || true)"; echo "$out"; grep -Eq "[0-9]+[.][0-9]+" <<< "$out"; ligolo-proxy -version'
 
   ghidra-image:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_ghidra }}
+    # Verify the large image on PR; avoid duplicate heavy builds on main pushes.
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.build_ghidra) }}
     needs: manifest-and-isolation
     runs-on: ubuntu-latest
     timeout-minutes: 25
