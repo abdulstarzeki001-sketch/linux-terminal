@@ -11,12 +11,12 @@ RUN git clone --depth 1 --branch v1.5.1 \
       https://github.com/Pennyw0rth/NetExec.git /tmp/netexec-src \
     && /usr/local/bin/python3.12 /tmp/patch-netexec-deps.py /tmp/netexec-src/pyproject.toml \
     && /usr/local/bin/python3.12 -m venv /opt/netexec312 \
-    && printf 'dploot==3.1.2\n' > /tmp/netexec-constraints.txt \
+    && printf 'dploot==3.2.2\n' > /tmp/netexec-constraints.txt \
     && /opt/netexec312/bin/python -m pip install --isolated --no-input \
       --disable-pip-version-check --no-cache-dir \
       -c /tmp/netexec-constraints.txt \
       /tmp/netexec-src \
-    && /opt/netexec312/bin/python -c "import importlib.metadata as m; assert m.version('netexec').startswith('1.5.1'); assert m.version('dploot') == '3.1.2'" \
+    && /opt/netexec312/bin/python -c "import importlib.metadata as m; assert m.version('netexec').startswith('1.5.1'); assert m.version('dploot') == '3.2.2'" \
     && test -x /opt/netexec312/bin/nxc
 
 FROM node:24-bookworm
