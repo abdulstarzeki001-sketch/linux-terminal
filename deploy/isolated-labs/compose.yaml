@@ -23,7 +23,7 @@ services:
       - kali-work:/workspace
     working_dir: /workspace
     entrypoint: ["/bin/bash", "-lc"]
-    command: ["nxc --version && ligolo-proxy -version && echo 'OFFLINE_AUDIT_IMAGE_READY'"]
+    command: ["command -v nxc && command -v ligolo-proxy && echo 'OFFLINE_AUDIT_IMAGE_READY'"]
     restart: "no"
 
   ghidra-analysis:
