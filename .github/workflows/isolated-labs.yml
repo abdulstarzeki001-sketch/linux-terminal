@@ -31,6 +31,7 @@ jobs:
         run: |
           set -euo pipefail
           bash -n deploy/isolated-labs/scripts/preflight.sh
+          bash -n deploy/isolated-labs/remaining-seven/preflight.sh
           docker compose -f deploy/isolated-labs/compose.yaml config --quiet
           docker compose -f deploy/isolated-labs/compose.yaml --profile audit --profile analysis config --format json > /tmp/lab-compose.json
           python3 - <<'PY'
@@ -42,6 +43,8 @@ jobs:
           assert len({x['id'] for x in tools})==11
           assert all(x['status'] in ('not_provisioned','image_definition_only') for x in tools)
           assert manifest['liveDeployment'] is False
+          assert manifest['railwayProduction']['installedCount']==8
+          assert len(manifest['remainingSeven'])==7
           compose=json.loads(Path('/tmp/lab-compose.json').read_text())
           assert set(compose['services'])=={'kali-audit','ghidra-analysis'}
           for name,svc in compose['services'].items():
@@ -54,6 +57,43 @@ jobs:
               assert svc.get('restart') in (None, 'no'), name
               assert not svc.get('devices'), name
           print('PASS: 11 truthful tool statuses, no ports, no network, no privileges')
+          PY
+          # Verify profiles that require a separate, private VM. Only dummy CI
+          # credentials are interpolated; no service, VM or container starts.
+          STAR_BH_PG_PASSWORD=ci-placeholder-unused-12345 \
+          STAR_BH_NEO4J_PASSWORD=ci-placeholder-unused-67890 \
+            docker compose -f deploy/isolated-labs/remaining-seven/compose.yaml \
+              --profile bloodhound --profile caldera config --format json \
+              > /tmp/star-seven-compose.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          cfg=json.loads(Path('/tmp/star-seven-compose.json').read_text())
+          services=cfg['services']
+          assert set(services)=={'bh-postgres','bh-neo4j','bloodhound','caldera-image-check'}
+          for name,svc in services.items():
+              assert not svc.get('privileged'),name
+              assert not svc.get('devices'),name
+              assert 'no-new-privileges:true' in svc.get('security_opt',[]),name
+              assert 'bloodhound' in svc.get('profiles',[]) or 'caldera' in svc.get('profiles',[])
+              assert 'docker.sock' not in str(svc.get('volumes',[]))
+          for name in ['bh-postgres','bh-neo4j']:
+              assert not services[name].get('ports'),name
+          ports=services['bloodhound']['ports']
+          assert len(ports)==1
+          assert ports[0]['host_ip']=='127.0.0.1'
+          assert int(ports[0]['published'])==18080
+          assert cfg['networks']['bh-private']['internal'] is True
+          caldera=services['caldera-image-check']
+          assert caldera['network_mode']=='none'
+          assert not caldera.get('ports')
+          assert caldera['read_only'] is True
+          assert 'ALL' in caldera['cap_drop']
+          assert 'IMAGE_VERIFIED_ONLY' in str(caldera['command'])
+          raw=Path('deploy/isolated-labs/remaining-seven/compose.yaml').read_text()
+          assert 'STAR_BH_PG_PASSWORD:?' in raw
+          assert 'STAR_BH_NEO4J_PASSWORD:?' in raw
+          print('PASS: 7-tool private lab has localhost-only UI, no public DB/C2 ports, and external secrets')
           PY
 
   kali-audit-image:
@@ -73,8 +113,8 @@ jobs:
             /bin/bash -lc 'set -e; command -v nxc; command -v ligolo-proxy; dpkg-query -W netexec ligolo-ng; out="$(nxc --version 2>&1 || true)"; echo "$out"; grep -Eq "[0-9]+[.][0-9]+" <<< "$out"; ligolo-proxy -version'
 
   ghidra-image:
-    # Verify the large image on PR; avoid duplicate heavy builds on main pushes.
-    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.build_ghidra) }}
+    # Expensive and already verified in its dedicated PR; opt-in only.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_ghidra }}
     needs: manifest-and-isolation
     runs-on: ubuntu-latest
     timeout-minutes: 25
