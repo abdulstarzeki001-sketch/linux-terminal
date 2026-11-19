@@ -13,6 +13,22 @@ RUN git clone -q --depth 1 --branch v0.9.2 \
   && test -s /out/ligolo-proxy \
   && chmod 0755 /out/ligolo-proxy
 
+# Compile ONLY syz-manager from the exact commit already verified by cloud CI.
+# QEMU, fuzzers, kernel test targets and privileged VM launches are excluded.
+FROM golang:1.27-bookworm AS syz_builder
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+RUN git init -q /tmp/star-syzkaller \
+  && git -C /tmp/star-syzkaller remote add origin https://github.com/google/syzkaller.git \
+  && git -C /tmp/star-syzkaller fetch -q --depth 1 origin 2006bdcccf565ba62831cd5ed157109e10f843a5 \
+  && git -C /tmp/star-syzkaller checkout -q --detach FETCH_HEAD \
+  && cd /tmp/star-syzkaller \
+  && test "$(git rev-parse HEAD)" = "2006bdcccf565ba62831cd5ed157109e10f843a5" \
+  && mkdir -p /out \
+  && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o /out/syz-manager ./syz-manager \
+  && test -s /out/syz-manager \
+  && chmod 0755 /out/syz-manager
+
 FROM python:3.12.16-slim-bookworm AS python312
 
 # Build NetExec from a fixed upstream tag in a throwaway Bookworm toolchain.
@@ -35,6 +51,8 @@ RUN git clone --depth 1 --branch v1.5.1 \
     && test -x /opt/netexec312/bin/nxc
 
 FROM node:24-bookworm
+COPY --from=syz_builder /out/syz-manager /usr/local/bin/syz-manager
+RUN test -x /usr/local/bin/syz-manager
 COPY --from=ligolo_builder /out/ligolo-proxy /usr/local/bin/ligolo-proxy
 RUN test -x /usr/local/bin/ligolo-proxy
 COPY --from=netexec_builder /opt/netexec312 /opt/netexec312
