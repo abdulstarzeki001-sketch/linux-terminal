@@ -2,6 +2,19 @@
 
 A password-protected web terminal. The browser shows xterm.js. The server runs a real `bash` shell with `node-pty`, inside a Docker container with resource limits. Each session is a fresh shell. Closing the tab kills it.
 
+## STAR AI local diagnostic worker (Kali WSL2)
+
+A new **approval-gated local worker** performs only predefined read-only diagnostics on a chosen Git repository. No arbitrary model-authored shell commands, background agent, remote listener, or Colab connection is enabled by this component.
+
+```bash
+python3 local_worker/worker.py --list
+python3 local_worker/worker.py --task git_branch --approve
+python3 local_worker/worker.py --job-file local_worker/job.example.json --approve
+python3 -m unittest discover -s test -p 'test_local_worker.py' -v
+```
+
+See [STAR AI local worker design and security contract](docs/STAR_AI_LOCAL_WORKER.md).
+
 ## Run locally
 
 ```sh
