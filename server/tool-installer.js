@@ -22,7 +22,7 @@ const LEGACY = Object.freeze({
   bloodhound:'Dedicated service with database and isolated directory lab required.',
   rubeus:'Windows executable: not compatible with native Linux container.',
   mimikatz:'Credential access tooling: inventory only.',
-  ligolo:'Network tunnel tool: inventory only; requires approved range.',
+  ligolo:'Network tunnel tool: the pinned CLI is image-bundled for read-only inventory. No proxy service or tunnel starts; a separate authorized range is required.',
   syzkaller:'Kernel fuzzing requires its own VM and privileged kernel lab.'
 });
 // Every card receives a real target/runtime plan, including non-railway tools.
@@ -38,7 +38,7 @@ const PROFILES=Object.freeze({
   netexec:{target:'railway_immutable_cli',readiness:'manual_review',requirements:['Version-pinned image CLI available without manual install','No automatic scans or access to external networks','Authorized isolated lab required before active testing']},
   rubeus:{target:'windows_vm',readiness:'incompatible_railway_linux',requirements:['Dedicated Windows laboratory VM','Authorization for identity testing','Local-only execution']},
   mimikatz:{target:'windows_vm',readiness:'incompatible_railway_linux',requirements:['Dedicated Windows VM','Privileged lab access','Sensitive credential handling controls']},
-  ligolo:{target:'isolated_network_range',readiness:'separate_environment',requirements:['Separate relay host and isolated range','Explicit network route approval','No public proxy deployment']},
+  ligolo:{target:'isolated_network_range',readiness:'separate_environment',requirements:['Ligolo-ng 0.9.2 proxy CLI is preinstalled in Railway image','A separate authenticated isolated range is required to operate tunnels','No proxy service, listeners or routes are started by the dashboard']},
   frida:{target:'railway_python_venv',readiness:'owner_approved',requirements:['Persistent Python virtual environment','Owner confirmation','External device instrumentation requires separate approval']},
   ghidra:{target:'dedicated_analysis_vm',readiness:'manual_review',requirements:['Java runtime appropriate to selected Ghidra release','Large persistent workspace','Separate analysis VM recommended']},
   aflpp:{target:'railway_debian_apt',readiness:'owner_approved',requirements:['Signed Debian package repository','Owner confirmation','At least 750 MiB free root filesystem and 250 MiB free persistent volume']},
