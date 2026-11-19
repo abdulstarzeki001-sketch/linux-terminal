@@ -35,7 +35,7 @@ bash scripts/preflight.sh audit
 docker compose --profile audit build kali-audit
 docker compose --profile audit run --rm kali-audit
 # Read-only CLI checks; do not pass a network target:
-docker compose --profile audit run --rm kali-audit 'nxc --version'
+docker compose --profile audit run --rm kali-audit 'dpkg-query -W netexec'
 docker compose --profile audit run --rm kali-audit 'ligolo-proxy -version'
 ```
 
