@@ -10,6 +10,10 @@ A new **approval-gated local worker** performs only predefined read-only diagnos
 python3 local_worker/worker.py --list
 python3 local_worker/worker.py --task git_branch --approve
 python3 local_worker/worker.py --job-file local_worker/job.example.json --approve
+# Qwen proposes one safe task; no execution without --auto-safe:
+python3 -m local_worker.ai_controller --prompt 'ما فرع Git الحالي؟'
+# Explicitly approve one safe, fixed command:
+python3 -m local_worker.ai_controller --prompt 'ما فرع Git الحالي؟' --auto-safe
 python3 -m unittest discover -s test -p 'test_local_worker.py' -v
 ```
 
