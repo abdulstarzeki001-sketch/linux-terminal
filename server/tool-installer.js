@@ -42,7 +42,7 @@ const PROFILES=Object.freeze({
   frida:{target:'railway_python_venv',readiness:'owner_approved',requirements:['Persistent Python virtual environment','Owner confirmation','External device instrumentation requires separate approval']},
   ghidra:{target:'dedicated_analysis_vm',readiness:'manual_review',requirements:['Java runtime appropriate to selected Ghidra release','Large persistent workspace','Separate analysis VM recommended']},
   aflpp:{target:'railway_debian_apt',readiness:'owner_approved',requirements:['Signed Debian package repository','Owner confirmation','At least 750 MiB free root filesystem and 250 MiB free persistent volume']},
-  syzkaller:{target:'dedicated_kernel_vm',readiness:'incompatible_railway_linux',requirements:['Dedicated kernel fuzzing VM','Controlled kernel snapshot and recovery','Privileged VM host unavailable in Railway terminal']}
+  syzkaller:{target:'dedicated_kernel_vm',readiness:'incompatible_railway_linux',requirements:['Pinned syz-manager CLI only; fuzzing remains disabled','Full kernel testing requires QEMU and a KCOV-enabled guest','Dedicated isolated VM host with snapshots required']}
 });
 
 const SAFE_NAMES=/^[a-zA-Z0-9][a-zA-Z0-9+._:-]*$/;
