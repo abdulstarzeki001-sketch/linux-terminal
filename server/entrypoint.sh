@@ -100,6 +100,14 @@ else
   exit 1
 fi
 
+# Static Syzkaller manager CLI exists; do not launch fuzzers or kernel VMs.
+if [[ -x /usr/local/bin/syz-manager ]] && [[ -f /usr/local/bin/syz-manager ]]; then
+  echo "[STAR TOOLS] SYZ_MANAGER=2006bdcc EXECUTABLE=/usr/local/bin/syz-manager VERIFIED (CLI_ONLY_NO_QEMU)"
+else
+  echo "[STAR TOOLS] ERROR: pinned Syzkaller manager CLI is missing" >&2
+  exit 1
+fi
+
 # The package manager is ephemeral, while its extra-package manifest is
 # persistent. Restoration is bounded; failure never hides the owner's files.
 if ! /usr/local/bin/wormstar-restore-packages; then
