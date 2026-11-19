@@ -29,6 +29,20 @@ RUN git init -q /tmp/star-syzkaller \
   && test -s /out/syz-manager \
   && chmod 0755 /out/syz-manager
 
+# Official NSA Ghidra 12.0.4, verified against upstream release checksum.
+# Java 21 (Jammy glibc) is isolated to the headless analyzer.
+FROM eclipse-temurin:21-jdk-jammy AS ghidra_builder
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      curl unzip ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL --retry 3 --connect-timeout 20 \
+      -o /tmp/ghidra-release.zip \
+      https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.0.4_build/ghidra_12.0.4_PUBLIC_20260303.zip \
+    && echo 'c3b458661d69e26e203d739c0c82d143cc8a4a29d9e571f099c2cf4bda62a120  /tmp/ghidra-release.zip' | sha256sum -c - \
+    && unzip -q /tmp/ghidra-release.zip -d /opt \
+    && test -f /opt/ghidra_12.0.4_PUBLIC/support/analyzeHeadless \
+    && rm -f /tmp/ghidra-release.zip
+
 FROM python:3.12.16-slim-bookworm AS python312
 
 # Build NetExec from a fixed upstream tag in a throwaway Bookworm toolchain.
@@ -51,6 +65,12 @@ RUN git clone --depth 1 --branch v1.5.1 \
     && test -x /opt/netexec312/bin/nxc
 
 FROM node:24-bookworm
+COPY --from=ghidra_builder /opt/ghidra_12.0.4_PUBLIC /opt/ghidra_12.0.4_PUBLIC
+COPY --from=ghidra_builder /opt/java/openjdk /opt/java/openjdk
+COPY server/ghidra-headless.sh /usr/local/bin/analyzeHeadless
+RUN chmod 0755 /usr/local/bin/analyzeHeadless \
+    && test -x /opt/java/openjdk/bin/java \
+    && test -f /opt/ghidra_12.0.4_PUBLIC/support/analyzeHeadless
 COPY --from=syz_builder /out/syz-manager /usr/local/bin/syz-manager
 RUN test -x /usr/local/bin/syz-manager
 COPY --from=ligolo_builder /out/ligolo-proxy /usr/local/bin/ligolo-proxy

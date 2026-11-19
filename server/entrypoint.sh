@@ -108,6 +108,17 @@ else
   exit 1
 fi
 
+# Ghidra is shipped as a headless analysis CLI, not a GUI or public service.
+# Startup checks only Java and the wrapper, without analyzing any binaries.
+if [[ -x /usr/local/bin/analyzeHeadless ]] &&
+   [[ -f /opt/ghidra_12.0.4_PUBLIC/support/analyzeHeadless ]] &&
+   /opt/java/openjdk/bin/java -version 2>&1 | grep -q 'version "21'; then
+  echo "[STAR TOOLS] GHIDRA=12.0.4 JAVA=21 EXECUTABLE=/usr/local/bin/analyzeHeadless VERIFIED (HEADLESS_ONLY)"
+else
+  echo "[STAR TOOLS] ERROR: Ghidra 12.0.4 headless files or Java 21 are missing" >&2
+  exit 1
+fi
+
 # The package manager is ephemeral, while its extra-package manifest is
 # persistent. Restoration is bounded; failure never hides the owner's files.
 if ! /usr/local/bin/wormstar-restore-packages; then

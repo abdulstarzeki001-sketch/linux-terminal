@@ -12,7 +12,7 @@ const PLANS = Object.freeze({
   netexec:{kind:'image',package:'netexec',command:null,compatibility:'NetExec 1.5.1 immutable CLI in Railway image; authenticated owner inventory only. Network tests require a separate authorized lab.',risk:'high'},
   frida:{kind:'pip',package:'frida-tools',command:'$HOME/.venv/bin/python -m pip install frida-tools==14.13.2',compatibility:'Linux; isolated Python venv',risk:'medium'},
   aflpp:{kind:'apt',package:'afl++',command:'sudo apt-get install --no-install-recommends afl++',compatibility:'Debian/Kali supported package availability varies',risk:'medium'},
-  ghidra:{kind:'manual',package:null,command:null,compatibility:'Needs JDK and headless or GUI architecture; separate image recommended',risk:'high'}
+  ghidra:{kind:'manual',package:'ghidra 12.0.4',command:'/usr/local/bin/analyzeHeadless -help',compatibility:'Verified Ghidra 12.0.4 headless with Java 21 in immutable Railway image; graphical UI and larger analyses need separate workstation.',risk:'medium'}
 });
 const LEGACY = Object.freeze({
   mythic:'Separate isolated C2 service; no in-process automatic install.',
@@ -40,7 +40,7 @@ const PROFILES=Object.freeze({
   mimikatz:{target:'windows_vm',readiness:'incompatible_railway_linux',requirements:['Dedicated Windows VM','Privileged lab access','Sensitive credential handling controls']},
   ligolo:{target:'isolated_network_range',readiness:'separate_environment',requirements:['Ligolo-ng 0.9.2 proxy CLI is preinstalled in Railway image','A separate authenticated isolated range is required to operate tunnels','No proxy service, listeners or routes are started by the dashboard']},
   frida:{target:'railway_python_venv',readiness:'owner_approved',requirements:['Persistent Python virtual environment','Owner confirmation','External device instrumentation requires separate approval']},
-  ghidra:{target:'dedicated_analysis_vm',readiness:'manual_review',requirements:['Java runtime appropriate to selected Ghidra release','Large persistent workspace','Separate analysis VM recommended']},
+  ghidra:{target:'railway_headless_cli',readiness:'manual_review',requirements:['Official Ghidra 12.0.4 release checksum verified on build','Headless CLI and Java 21 are included; no analysis runs automatically','Large sample analysis should use a dedicated isolated VM with additional RAM']},
   aflpp:{target:'railway_debian_apt',readiness:'owner_approved',requirements:['Signed Debian package repository','Owner confirmation','At least 750 MiB free root filesystem and 250 MiB free persistent volume']},
   syzkaller:{target:'dedicated_kernel_vm',readiness:'incompatible_railway_linux',requirements:['Pinned syz-manager executable bundled; no fuzzing is enabled','Full operation requires QEMU and a KCOV-enabled guest kernel','Dedicated snapshots and privileged VM host unavailable in this Railway container']}
 });

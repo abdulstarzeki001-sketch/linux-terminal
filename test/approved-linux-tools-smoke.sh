@@ -43,18 +43,19 @@ const required={
   aflpp:'afl-fuzz',
   netexec:'nxc',
   ligolo:'ligolo-proxy',
-  syzkaller:'syz-manager'
+  syzkaller:'syz-manager',
+  ghidra:'analyzeHeadless'
 };
 if(list.length!==15)throw Error('Expected original catalog of 15 tools');
 for (const [id,executable] of Object.entries(required)) {
   const t=list.find(x=>x.id===id);
-  if(!t?.installed||t.executable!==executable||(!['ligolo','syzkaller'].includes(id)&&!t.versionAllowed)||t.mode!=='root_owned_binary'){
+  if(!t?.installed||t.executable!==executable||(!['ligolo','syzkaller','ghidra'].includes(id)&&!t.versionAllowed)||t.mode!=='root_owned_binary'){
     throw Error('Missing or untrusted CLI '+id+': '+JSON.stringify(t));
   }
   console.log('[INVENTORY] '+id+' installed, executable='+executable);
 }
 const installed=list.filter(t=>t.installed);
-if(installed.length!==7)throw Error('Unexpected installed tool count: '+installed.length);
-console.log('[INVENTORY] 7/15 real tools installed');
+if(installed.length!==8)throw Error('Unexpected installed tool count: '+installed.length);
+console.log('[INVENTORY] 8/15 real tools installed');
 JS
 echo "PASS: pinned NetExec, Certipy, Impacket, Frida and AFL++ binaries and catalog verified"
