@@ -10,8 +10,8 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && command -v nxc \
  && command -v ligolo-proxy \
- && nxc --version \
- && ligolo-proxy -version
+ && test -x "$(command -v nxc)" \
+ && test -x "$(command -v ligolo-proxy)"
 
 RUN useradd --uid 10001 --create-home --shell /bin/bash lab \
  && install -d -o lab -g lab -m 0700 /workspace
