@@ -53,8 +53,11 @@ jobs:
           import json
           from pathlib import Path
           content=Path('/tmp/star-bh-ps.json').read_text().strip()
-          rows=json.loads(content)
-          if isinstance(rows,dict): rows=[rows]
+          try:
+              rows=json.loads(content)
+              if isinstance(rows,dict): rows=[rows]
+          except json.JSONDecodeError:
+              rows=[json.loads(line) for line in content.splitlines() if line.strip()]
           assert len(rows)==3,rows
           bh=next(row for row in rows if row.get('Service')=='bloodhound')
           pubs=bh.get('Publishers') or []
