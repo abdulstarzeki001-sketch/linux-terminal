@@ -90,6 +90,16 @@ else
   exit 1
 fi
 
+# Fixed 0.9.2 tag compiled into image; this checks help only, not a listener.
+# No Ligolo process or tunnel runs after this verification.
+if [[ -x /usr/local/bin/ligolo-proxy ]] &&
+   timeout -k 1s 5s gosu tuser /usr/local/bin/ligolo-proxy -h >/dev/null 2>&1; then
+  echo "[STAR TOOLS] LIGOLO_NG=0.9.2 EXECUTABLE=/usr/local/bin/ligolo-proxy VERIFIED (HELP_ONLY)"
+else
+  echo "[STAR TOOLS] ERROR: Ligolo-ng proxy CLI is missing or cannot show local help" >&2
+  exit 1
+fi
+
 # The package manager is ephemeral, while its extra-package manifest is
 # persistent. Restoration is bounded; failure never hides the owner's files.
 if ! /usr/local/bin/wormstar-restore-packages; then
