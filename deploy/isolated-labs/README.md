@@ -4,11 +4,13 @@ This package creates **real, offline, reproducible tool containers** for an owne
 
 ## Current status (19 November 2026)
 
-- STAR Terminal on Railway remains separate and healthy, with Certipy, Impacket, Frida and AFL++ verified there (4/15).
+- STAR Terminal on Railway is verified at **8/15 CLI binaries** (Certipy, Impacket, Frida, AFL++, NetExec, Ligolo-ng proxy, Syzkaller Manager, Ghidra Headless). This is executable inventory, not proof that all full VM-based features are operational.
 - The new Railway project request **failed**: `Free plan resource provision limit exceeded`. No new billed services, VMs or public domains were created.
 - This repository supplies audited offline containers for **NetExec** and **Ligolo-ng**, plus a dedicated **Ghidra headless** image. Running containers still requires a Docker host with available resources.
 - **BloodHound CE** needs the official app + PostgreSQL + Neo4j; **CALDERA** and the three C2 frameworks need separate authenticated lab-only services. **Rubeus/Mimikatz** require a Windows VM; **Syzkaller** requires Linux/QEMU with a KCOV-enabled kernel. No production launches are configured for these services.
 - CI can build and verify the small Kali image in an **ephemeral GitHub Actions runner**, avoiding laptop resource use. CI is not a continuously available terminal and does not preserve data.
+
+For the **seven remaining tools**, the `remaining-seven/` directory contains a private BloodHound CE stack, a Caldera image-check-only profile, a fail-closed resource/secrets preflight and source/VM requirements for the other five. **None of the seven is claimed to be running** on Railway or the local Windows host.
 
 ## Prerequisites & isolation
 
