@@ -1,0 +1,87 @@
+name: STAR Isolated Lab Build and Security Checks
+
+on:
+  pull_request:
+    paths:
+      - "deploy/isolated-labs/**"
+      - ".github/workflows/isolated-labs.yml"
+  push:
+    branches: [main]
+    paths:
+      - "deploy/isolated-labs/**"
+      - ".github/workflows/isolated-labs.yml"
+  workflow_dispatch:
+    inputs:
+      build_ghidra:
+        description: "Explicitly build the large Ghidra image in a temporary runner"
+        type: boolean
+        default: false
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  manifest-and-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate manifest and fail-closed offline Compose security
+        run: |
+          set -euo pipefail
+          bash -n deploy/isolated-labs/scripts/preflight.sh
+          docker compose -f deploy/isolated-labs/compose.yaml config --quiet
+          docker compose -f deploy/isolated-labs/compose.yaml --profile audit --profile analysis config --format json > /tmp/lab-compose.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest=json.loads(Path('deploy/isolated-labs/tool-status.json').read_text())
+          tools=manifest['tools']
+          assert len(tools)==11
+          assert len({x['id'] for x in tools})==11
+          assert all(x['status'] in ('not_provisioned','image_definition_only') for x in tools)
+          assert manifest['liveDeployment'] is False
+          compose=json.loads(Path('/tmp/lab-compose.json').read_text())
+          assert set(compose['services'])=={'kali-audit','ghidra-analysis'}
+          for name,svc in compose['services'].items():
+              assert not svc.get('ports'), name
+              assert not svc.get('privileged'), name
+              assert svc.get('network_mode')=='none', name
+              assert svc.get('read_only') is True, name
+              assert 'ALL' in svc.get('cap_drop',[]), name
+              assert any('no-new-privileges:true' == x for x in svc.get('security_opt',[])), name
+              assert svc.get('restart') in (None, 'no'), name
+              assert not svc.get('devices'), name
+          print('PASS: 11 truthful tool statuses, no ports, no network, no privileges')
+          PY
+
+  kali-audit-image:
+    needs: manifest-and-isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build signed Kali audit image (NetExec and Ligolo-ng)
+        run: docker build --pull -t star-isolated-kali-audit:ci deploy/isolated-labs/kali-audit
+      - name: Verify installed CLIs with networking completely disabled
+        run: |
+          docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev,size=128m \
+            star-isolated-kali-audit:ci \
+            /bin/bash -lc 'command -v nxc && nxc --version && command -v ligolo-proxy && ligolo-proxy -version'
+
+  ghidra-image:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_ghidra }}
+    needs: manifest-and-isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build optional large Ghidra headless image
+        run: docker build --pull -t star-isolated-ghidra:ci deploy/isolated-labs/ghidra-analysis
+      - name: Validate binary only; no sample or GUI launched
+        run: |
+          docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
+            star-isolated-ghidra:ci \
+            /bin/bash -lc 'test -x /usr/local/bin/star-ghidra-headless && echo GHIDRA_BINARY_VERIFIED'
