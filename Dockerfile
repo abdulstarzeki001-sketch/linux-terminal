@@ -1,5 +1,22 @@
 FROM python:3.12.16-slim-bookworm AS python312
+
+# Build NetExec from a fixed upstream tag in a throwaway Bookworm toolchain.
+# Keep compilers and build headers out of the production Node image.
+FROM python:3.12.16-bookworm AS netexec_builder
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      git build-essential rustc cargo libffi-dev libssl-dev pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+RUN /usr/local/bin/python3.12 -m venv /opt/netexec312 \
+    && printf 'dploot==3.1.2\n' > /tmp/netexec-constraints.txt \
+    && /opt/netexec312/bin/python -m pip install --isolated --no-input \
+      --disable-pip-version-check --no-cache-dir \
+      -c /tmp/netexec-constraints.txt \
+      "git+https://github.com/Pennyw0rth/NetExec.git@v1.5.1" \
+    && /opt/netexec312/bin/python -c "import importlib.metadata as m; assert m.version('netexec') == '1.5.1'; assert m.version('dploot') == '3.1.2'" \
+    && test -x /opt/netexec312/bin/nxc
+
 FROM node:24-bookworm
+COPY --from=netexec_builder /opt/netexec312 /opt/netexec312
 # The Python 3.12 runtime is separate from system Python 3.11.
 COPY --from=python312 /usr/local/bin/python3.12 /usr/local/bin/python3.12
 COPY --from=python312 /usr/local/lib/python3.12 /usr/local/lib/python3.12
@@ -45,6 +62,10 @@ RUN /usr/local/bin/python3.12 -m venv /opt/frida312 \
     && /opt/frida312/bin/python -c "import importlib.metadata as m; assert m.version('frida-tools') == '14.13.2'" \
     && test -x /opt/frida312/bin/frida \
     && /opt/frida312/bin/frida --version > /dev/null
+# NetExec is an owner inventory CLI only; never runs a network target in CI.
+RUN test -x /opt/netexec312/bin/nxc \
+    && /opt/netexec312/bin/python -c "import importlib.metadata as m; assert m.version('netexec')=='1.5.1'"
+
 # Debian signed APT package; only verify the binary. Do not fuzz any targets.
 RUN dpkg-query -W -f='${Status}' 'afl++' | grep -qx 'install ok installed' \
     && test -x /usr/bin/afl-fuzz
