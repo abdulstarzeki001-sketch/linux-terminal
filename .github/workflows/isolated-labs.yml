@@ -68,6 +68,7 @@ jobs:
         run: |
           docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
             --tmpfs /tmp:rw,noexec,nosuid,nodev,size=128m \
+            --tmpfs /workspace:rw,nosuid,nodev,uid=10001,gid=10001,mode=0700,size=128m \
             star-isolated-kali-audit:ci \
             /bin/bash -lc 'set -e; command -v nxc; command -v ligolo-proxy; dpkg-query -W netexec ligolo-ng; out="$(nxc --version 2>&1 || true)"; echo "$out"; grep -Eq "[0-9]+[.][0-9]+" <<< "$out"; ligolo-proxy -version'
 
