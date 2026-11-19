@@ -1,0 +1,87 @@
+name: STAR BloodHound CE Private Runtime Smoke
+
+on:
+  pull_request:
+    paths:
+      - "deploy/isolated-labs/remaining-seven/compose.yaml"
+      - "deploy/isolated-labs/remaining-seven/ci-memory-override.yaml"
+      - ".github/workflows/bloodhound-private-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bloodhound-localhost-smoke:
+    # Disposable cloud runner. No public IP listener, target data, or permanent server.
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check GitHub runner memory before starting three databases/services
+        run: |
+          set -euo pipefail
+          awk '/^MemTotal:/ {printf "TOTAL_RAM_GIB=%.1f\n", $2/1048576}' /proc/meminfo
+          awk '/^MemTotal:/ {if ($2 < 6000000) exit 2}' /proc/meminfo
+          docker compose version
+      - name: Pull official images without publishing services
+        run: |
+          set -euo pipefail
+          for name in docker.io/library/postgres:18 docker.io/library/neo4j:4.4.42 docker.io/specterops/bloodhound:latest; do
+            docker pull "$name" >/dev/null
+            docker image inspect "$name" --format 'IMAGE_DIGEST={{json .RepoDigests}}'
+          done
+      - name: Start private BloodHound CE and verify unauthenticated login UI only
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cd deploy/isolated-labs/remaining-seven
+          pg_secret="$(openssl rand -hex 24)"
+          neo_secret="$(openssl rand -hex 24)"
+          echo "::add-mask::$pg_secret"
+          echo "::add-mask::$neo_secret"
+          export STAR_BH_PG_PASSWORD="$pg_secret"
+          export STAR_BH_NEO4J_PASSWORD="$neo_secret"
+          files=(-f compose.yaml -f ci-memory-override.yaml --profile bloodhound)
+          cleanup() { docker compose "${files[@]}" down --volumes --remove-orphans >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          docker compose "${files[@]}" config --quiet
+          docker compose "${files[@]}" up -d --no-build --wait
+          # Assert loopback-only UI and unexposed database ports.
+          docker compose "${files[@]}" ps --format json > /tmp/star-bh-ps.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          rows=[json.loads(line) for line in Path('/tmp/star-bh-ps.json').read_text().splitlines() if line.strip()]
+          assert len(rows)==3, rows
+          bh=next(row for row in rows if row.get('Service')=='bloodhound')
+          assert '127.0.0.1:18080' in str(bh.get('Publishers',bh.get('Ports',''))),bh
+          for row in rows:
+              if row.get('Service')!='bloodhound':
+                  assert not row.get('Publishers') and not row.get('Ports'),row
+          print('PASS: database ports absent; private UI only on localhost')
+          PY
+          ok=0
+          for attempt in $(seq 1 80); do
+            code="$(curl --noproxy '*' --max-time 3 -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/ui/login || true)"
+            case "$code" in
+              200|301|302|303|307|308) ok=1; break ;;
+            esac
+            sleep 5
+          done
+          if [[ "$ok" -ne 1 ]]; then
+            echo "ERROR: BloodHound CE private login endpoint did not become ready; HTTP=$code"
+            docker compose "${files[@]}" ps
+            exit 1
+          fi
+          echo "PASS: BloodHound CE login endpoint HTTP=$code on localhost; no AD data ingested"
+          echo "PASS: ephemeral database/data will be removed on cleanup"
+      - name: Confirm no services from this job are intentionally retained
+        if: always()
+        run: |
+          docker ps --filter "label=com.docker.compose.project=star-seven-lab" --format '{{.Names}}' | tee /tmp/star-bh-leftovers
+          if test -s /tmp/star-bh-leftovers; then
+            echo 'WARNING: remaining containers were found; runner will be destroyed'
+          else
+            echo 'PASS: no live BloodHound containers remain on ephemeral runner'
+          fi
