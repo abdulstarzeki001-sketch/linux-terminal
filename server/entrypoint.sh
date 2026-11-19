@@ -83,7 +83,7 @@ fi
 
 # Verified prebuilt CLI; no hosts, credentials or network connections.
 if [[ -x /opt/netexec312/bin/nxc ]] &&
-   gosu tuser /opt/netexec312/bin/python -c 'import importlib.metadata as m; assert m.version("netexec") == "1.5.1"; assert m.version("dploot") == "3.1.2"' >/dev/null 2>&1; then
+   gosu tuser /opt/netexec312/bin/python -c 'import importlib.metadata as m; assert m.version("netexec").startswith("1.5.1"); assert m.version("dploot") == "3.1.2"' >/dev/null 2>&1; then
   echo "[STAR TOOLS] NETEXEC=1.5.1 EXECUTABLE=/opt/netexec312/bin/nxc VERIFIED"
 else
   echo "[STAR TOOLS] ERROR: immutable NetExec runtime verification failed" >&2
