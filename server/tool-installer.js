@@ -9,7 +9,7 @@ const {catalogState}=require('./tool-install-runner');
 const PLANS = Object.freeze({
   certipy:{kind:'pip',package:'certipy-ad',command:'$HOME/.venv-py312/bin/python -m pip install certipy-ad==5.1.0',compatibility:'Linux; dedicated Python 3.12 persistent virtualenv for Certipy 5.1.0',risk:'medium'},
   impacket:{kind:'pip',package:'impacket',command:'$HOME/.venv/bin/python -m pip install impacket==0.13.1',compatibility:'Linux; isolated Python venv',risk:'medium'},
-  netexec:{kind:'manual',package:'netexec',command:null,compatibility:'Kali repository package; Railway image is Debian, verify approved isolated installation method',risk:'high'},
+  netexec:{kind:'image',package:'netexec',command:null,compatibility:'NetExec 1.5.1 immutable CLI in Railway image; authenticated owner inventory only. Network tests require a separate authorized lab.',risk:'high'},
   frida:{kind:'pip',package:'frida-tools',command:'$HOME/.venv/bin/python -m pip install frida-tools==14.13.2',compatibility:'Linux; isolated Python venv',risk:'medium'},
   aflpp:{kind:'apt',package:'afl++',command:'sudo apt-get install --no-install-recommends afl++',compatibility:'Debian/Kali supported package availability varies',risk:'medium'},
   ghidra:{kind:'manual',package:null,command:null,compatibility:'Needs JDK and headless or GUI architecture; separate image recommended',risk:'high'}
@@ -35,7 +35,7 @@ const PROFILES=Object.freeze({
   bloodhound:{target:'dedicated_container_stack',readiness:'separate_environment',requirements:['BloodHound CE application container','Dedicated database and persistent storage','RAM and private service authentication']},
   certipy:{target:'railway_python_venv',readiness:'owner_approved',requirements:['Dedicated Python 3.12 virtualenv; Debian Python 3.11 remains untouched','Persistent Python virtual environment','Owner confirmation','At least 250 MiB free volume space']},
   impacket:{target:'railway_python_venv',readiness:'owner_approved',requirements:['Persistent Python virtual environment','Owner confirmation','At least 250 MiB free volume space']},
-  netexec:{target:'dedicated_kali_vm',readiness:'manual_review',requirements:['Kali or supported distribution','Package compatibility and dependency review','Authorized isolated range']},
+  netexec:{target:'railway_immutable_cli',readiness:'manual_review',requirements:['Version-pinned image CLI available without manual install','No automatic scans or access to external networks','Authorized isolated lab required before active testing']},
   rubeus:{target:'windows_vm',readiness:'incompatible_railway_linux',requirements:['Dedicated Windows laboratory VM','Authorization for identity testing','Local-only execution']},
   mimikatz:{target:'windows_vm',readiness:'incompatible_railway_linux',requirements:['Dedicated Windows VM','Privileged lab access','Sensitive credential handling controls']},
   ligolo:{target:'isolated_network_range',readiness:'separate_environment',requirements:['Separate relay host and isolated range','Explicit network route approval','No public proxy deployment']},
