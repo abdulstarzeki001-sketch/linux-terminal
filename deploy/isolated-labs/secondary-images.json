@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "policy": "download_only_no_agents_no_listeners_no_targets",
+  "liveDeployment": false,
+  "images": [
+    {
+      "tool_id": "caldera",
+      "source": "ghcr.io/mitre/caldera:5.2.0",
+      "note": "Pinned upstream 5.2.0 image, isolated lab only; container never started in CI"
+    },
+    {
+      "tool_id": "bloodhound",
+      "source": "docker.io/specterops/bloodhound:latest",
+      "note": "Official BloodHound CE app image; requires separate PostgreSQL and graph database. CI logs pulled digest."
+    },
+    {
+      "tool_id": "bloodhound_postgresql",
+      "source": "docker.io/library/postgres:17-alpine",
+      "note": "Official PostgreSQL supporting image; no service started"
+    },
+    {
+      "tool_id": "bloodhound_neo4j",
+      "source": "docker.io/library/neo4j:5-community",
+      "note": "Official Neo4j supporting image; no service started"
+    }
+  ],
+  "syzkaller": {
+    "source": "https://github.com/google/syzkaller.git",
+    "method": "compile_syz_manager_only",
+    "requires_qemu_kcov_for_execution": true
+  },
+  "limitations": [
+    "Ephemeral GitHub runner images are not a permanent installation",
+    "No public ports or credentials are provisioned",
+    "BloodHound CE is not usable until database and app stack have a private authenticated runtime",
+    "Caldera is not started, no agents/listeners run",
+    "Syzkaller cannot fuzz a kernel without QEMU/KCOV guest and isolated VM host"
+  ]
+}
