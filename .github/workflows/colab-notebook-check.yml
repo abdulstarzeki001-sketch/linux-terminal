@@ -6,11 +6,13 @@ on:
     paths:
       - 'colab/STAR_AI_Qwen35_GPU_Colab.ipynb'
       - 'colab/STAR_AI_ULTRA_A100_80GB.ipynb'
+      - 'colab/STAR_AI_ULTRA_GPU_Colab.ipynb'
       - '.github/workflows/colab-notebook-check.yml'
   pull_request:
     paths:
       - 'colab/STAR_AI_Qwen35_GPU_Colab.ipynb'
       - 'colab/STAR_AI_ULTRA_A100_80GB.ipynb'
+      - 'colab/STAR_AI_ULTRA_GPU_Colab.ipynb'
       - '.github/workflows/colab-notebook-check.yml'
 
 permissions:
@@ -32,6 +34,7 @@ jobs:
           paths = [
               Path("colab/STAR_AI_Qwen35_GPU_Colab.ipynb"),
               Path("colab/STAR_AI_ULTRA_A100_80GB.ipynb"),
+              Path("colab/STAR_AI_ULTRA_GPU_Colab.ipynb"),
           ]
           for path in paths:
               nb = json.loads(path.read_text(encoding="utf-8"))
@@ -54,4 +57,27 @@ jobs:
               for forbidden in ("ngrok", "cloudflared", "localtunnel", "0.0.0.0:11434"):
                   assert forbidden not in code, f"{path}: external tunnel/bind {forbidden}"
               print(f"PASS: {path}: {len(cells)} cells (syntax only; live GPU not checked)")
+          PY
+
+      - name: Verify resource routing without a GPU
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import ast, json
+          from pathlib import Path
+          notebook = json.loads(Path('colab/STAR_AI_ULTRA_GPU_Colab.ipynb').read_text())
+          source = next(
+              ''.join(cell['source']) for cell in notebook['cells']
+              if 'MODEL_CHOICES = ' in ''.join(cell.get('source', []))
+          )
+          for vram, disk, expected in [
+              (79.3, 110, 'qwen3.6:35b'),
+              (30, 30, 'qwen3.6:27b'),
+              (16, 20, 'qwen3.5:9b'),
+              (9, 9, 'qwen3.5:4b'),
+          ]:
+              env = {'gpu_free_gib': vram, 'disk_free_gib': disk}
+              exec(compile(source, '<selection>', 'exec'), env)
+              assert env['MODEL'] == expected, (vram, disk, env['MODEL'], expected)
+          print('PASS: 4 resource-selection cases')
           PY
