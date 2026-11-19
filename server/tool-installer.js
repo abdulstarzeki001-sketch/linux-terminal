@@ -23,7 +23,7 @@ const LEGACY = Object.freeze({
   rubeus:'Windows executable: not compatible with native Linux container.',
   mimikatz:'Credential access tooling: inventory only.',
   ligolo:'Network tunnel tool: the pinned CLI is image-bundled for read-only inventory. No proxy service or tunnel starts; a separate authorized range is required.',
-  syzkaller:'Kernel fuzzing requires its own VM and privileged kernel lab.'
+  syzkaller:'Pinned syz-manager CLI is installed locally. Full kernel fuzzing remains disabled until dedicated QEMU/KCOV training VM is available.'
 });
 // Every card receives a real target/runtime plan, including non-railway tools.
 // This is not permission to install or start C2, credential dumping or tunnelling tools.
@@ -42,7 +42,7 @@ const PROFILES=Object.freeze({
   frida:{target:'railway_python_venv',readiness:'owner_approved',requirements:['Persistent Python virtual environment','Owner confirmation','External device instrumentation requires separate approval']},
   ghidra:{target:'dedicated_analysis_vm',readiness:'manual_review',requirements:['Java runtime appropriate to selected Ghidra release','Large persistent workspace','Separate analysis VM recommended']},
   aflpp:{target:'railway_debian_apt',readiness:'owner_approved',requirements:['Signed Debian package repository','Owner confirmation','At least 750 MiB free root filesystem and 250 MiB free persistent volume']},
-  syzkaller:{target:'dedicated_kernel_vm',readiness:'incompatible_railway_linux',requirements:['Dedicated kernel fuzzing VM','Controlled kernel snapshot and recovery','Privileged VM host unavailable in Railway terminal']}
+  syzkaller:{target:'dedicated_kernel_vm',readiness:'incompatible_railway_linux',requirements:['Pinned syz-manager executable bundled; no fuzzing is enabled','Full operation requires QEMU and a KCOV-enabled guest kernel','Dedicated snapshots and privileged VM host unavailable in this Railway container']}
 });
 
 const SAFE_NAMES=/^[a-zA-Z0-9][a-zA-Z0-9+._:-]*$/;
