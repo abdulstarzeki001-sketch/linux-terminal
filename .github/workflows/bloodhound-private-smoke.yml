@@ -49,6 +49,9 @@ jobs:
           docker compose "${files[@]}" up -d --no-build --wait
           # Assert loopback-only UI and unexposed database ports.
           docker compose "${files[@]}" ps --format json > /tmp/star-bh-ps.json
+          bh_id="$(docker compose "${files[@]}" ps -q bloodhound)"
+          test -n "$bh_id"
+          docker inspect "$bh_id" --format '{{json .HostConfig.PortBindings}}' > /tmp/star-bh-bindings.json
           python3 - <<'PY'
           import json
           from pathlib import Path
@@ -58,14 +61,15 @@ jobs:
               if isinstance(rows,dict): rows=[rows]
           except json.JSONDecodeError:
               rows=[json.loads(line) for line in content.splitlines() if line.strip()]
-          assert len(rows)==3,rows
-          bh=next(row for row in rows if row.get('Service')=='bloodhound')
-          pubs=bh.get('Publishers') or []
-          assert len(pubs)==1, pubs
-          assert pubs[0].get('URL')=='127.0.0.1' and int(pubs[0].get('PublishedPort',0))==18080,pubs
+          assert len(rows)==3, rows
           for row in rows:
               if row.get('Service')!='bloodhound':
-                  assert not row.get('Publishers'),row
+                  exposed=[p for p in (row.get('Publishers') or []) if int(p.get('PublishedPort') or 0)>0]
+                  assert not exposed, row
+          bindings=json.loads(Path('/tmp/star-bh-bindings.json').read_text())
+          assert len(bindings)==1 and '8080/tcp' in bindings,bindings
+          mapped=bindings['8080/tcp']
+          assert len(mapped)==1 and mapped[0].get('HostIp')=='127.0.0.1' and mapped[0].get('HostPort')=='18080',mapped
           print('PASS: database ports absent; private UI only on localhost')
           PY
           ok=0
