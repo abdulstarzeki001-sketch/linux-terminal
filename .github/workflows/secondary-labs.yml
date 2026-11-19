@@ -1,0 +1,94 @@
+name: STAR Secondary Offline Lab Image Verification
+
+on:
+  pull_request:
+    paths:
+      - "deploy/isolated-labs/secondary-images.json"
+      - ".github/workflows/secondary-labs.yml"
+  push:
+    branches: [main]
+    paths:
+      - "deploy/isolated-labs/secondary-images.json"
+      - ".github/workflows/secondary-labs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-download-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require no unapproved live deployment or listeners
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('deploy/isolated-labs/secondary-images.json').read_text())
+          assert p['liveDeployment'] is False
+          assert p['policy']=='download_only_no_agents_no_listeners_no_targets'
+          assert {i['tool_id'] for i in p['images']} == {
+             'caldera','bloodhound','bloodhound_postgresql','bloodhound_neo4j'}
+          assert p['syzkaller']['requires_qemu_kcov_for_execution'] is True
+          print('PASS: official images only, no live deployment, no listeners or targets')
+          PY
+
+  caldera-image:
+    needs: validate-download-policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Pull official fixed-release MITRE Caldera image without running it
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull ghcr.io/mitre/caldera:5.2.0
+          docker image inspect ghcr.io/mitre/caldera:5.2.0 --format 'CALDERA_IMAGE_ID={{.Id}}'
+          docker image inspect ghcr.io/mitre/caldera:5.2.0 --format 'CALDERA_MANIFEST_DIGEST={{json .RepoDigests}}'
+          test "$(docker image inspect ghcr.io/mitre/caldera:5.2.0 --format '{{.Os}}/{{.Architecture}}')" = 'linux/amd64'
+          echo 'PASS: official Caldera image installed in ephemeral runner; server NOT started'
+
+  bloodhound-images:
+    needs: validate-download-policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Pull official BloodHound CE app and database images; do not start
+        shell: bash
+        run: |
+          set -euo pipefail
+          for image in \
+            docker.io/specterops/bloodhound:latest \
+            docker.io/library/postgres:17-alpine \
+            docker.io/library/neo4j:5-community; do
+            docker pull "$image"
+            docker image inspect "$image" --format 'IMAGE_ID={{.Id}}'
+            docker image inspect "$image" --format 'IMAGE_MANIFEST={{json .RepoDigests}}'
+          done
+          echo 'PASS: BloodHound CE and database images downloaded; no processes, ports or default credentials'
+
+  syzkaller-compile:
+    needs: validate-download-policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          check-latest: true
+      - name: Compile official syz-manager only; no QEMU or fuzzing
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/google/syzkaller.git /tmp/star-syzkaller
+          cd /tmp/star-syzkaller
+          echo "SOURCE_COMMIT=$(git rev-parse HEAD)"
+          go version
+          go build -trimpath -o /tmp/star-syz-manager ./syz-manager
+          test -s /tmp/star-syz-manager
+          sha256sum /tmp/star-syz-manager
+          echo 'PASS: syz-manager compiled without running fuzzers, VMs or target kernels'

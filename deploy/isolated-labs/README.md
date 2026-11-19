@@ -52,6 +52,24 @@ docker compose --profile analysis run --rm ghidra-analysis
 
 The Ghidra image installs the official Kali `ghidra` package and verifies the installed `analyzeHeadless` entrypoint. No GUI is forwarded, no sample is processed automatically and no ports are exposed.
 
+## Additional ephemeral cloud image checks
+
+The separate workflow `.github/workflows/secondary-labs.yml` installs/downloads **unstarted** official vendor images into throwaway GitHub Actions workers and compiles the **syz-manager** CLI without running QEMU. It does not produce a persistent server.
+
+| Component | Ephemeral check | Live deployment |
+| --- | --- | --- |
+| MITRE CALDERA 5.2.0 | Pull official GHCR image, inspect digest/architecture, no server start | Not provisioned |
+| BloodHound CE | Pull official app, PostgreSQL and Neo4j images; inspect image digests | Not provisioned |
+| Syzkaller | Compile only official `syz-manager` binary and record source SHA/hash | No QEMU/KCOV VM |
+| Mythic, Sliver, Havoc | No image started, agent compiled or listener configured | Not provisioned |
+| Rubeus, Mimikatz | No Windows executable run | No isolated Windows VM |
+
+A green CI run means **artifacts were obtainable and built on an ephemeral runner**; it does not mean these services are connected to STAR Terminal or that they have been installed persistently. Official BloodHound CE may change its version under the moving `latest` tag; the job prints the resolved registry digest, which must be pinned for any future production deployment.
+
+### Additional provider capacity checks
+
+The connected Railway account rejected creation of a new lab project with `Free plan resource provision limit exceeded`. A connected DigitalOcean account returned a droplet provisioning-limit warning and no accessible existing droplets. These constraints are independent from GitHub Actions build success. No new paid VM was created.
+
 ## Dedicated services not provisioned by this repository
 
 **BloodHound CE:** Follow SpecterOps' [official Community Edition quickstart](https://bloodhound.specterops.io/get-started/quickstart/community-edition-quickstart) or [official Docker Compose example](https://github.com/SpecterOps/BloodHound/tree/main/examples/docker-compose), with isolated database volumes and unique secrets. Bind the UI to localhost or an authenticated private tunnel. Do not reuse tutorial/default DB credentials when exposing it.
