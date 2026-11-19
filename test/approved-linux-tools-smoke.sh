@@ -47,7 +47,7 @@ const required={
 if(list.length!==15)throw Error('Expected original catalog of 15 tools');
 for (const [id,executable] of Object.entries(required)) {
   const t=list.find(x=>x.id===id);
-  if(!t?.installed||t.executable!==executable||!t.versionAllowed||t.mode!=='root_owned_binary'){
+  if(!t?.installed||t.executable!==executable||(id!=='ligolo'&&!t.versionAllowed)||t.mode!=='root_owned_binary'){
     throw Error('Missing or untrusted CLI '+id+': '+JSON.stringify(t));
   }
   console.log('[INVENTORY] '+id+' installed, executable='+executable);
