@@ -52,7 +52,10 @@ services:
     ports:
       # Strictly local on dedicated lab VM; access via approved SSH tunnel.
       - "127.0.0.1:18080:8080"
-    networks: [bh-private]
+    # Docker 29 may ignore published loopback ports on internal-only bridges.
+    # App joins an additional UI bridge; databases remain private/internal.
+    # Only 127.0.0.1:18080 is published to the host.
+    networks: [bh-private, bh-ui]
     volumes:
       - bh-work:/work
     depends_on:
@@ -80,6 +83,10 @@ services:
 networks:
   bh-private:
     internal: true
+  # Not internal: required for Docker's localhost-only port publication.
+  # The BloodHound app can have outbound connectivity; deploy on a firewalled VM.
+  bh-ui:
+    driver: bridge
 volumes:
   bh-pg-data:
   bh-graph-data:

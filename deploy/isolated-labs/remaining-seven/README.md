@@ -2,6 +2,13 @@
 
 This package prepares *private* runtime infrastructure for the seven tools not deployed on STAR Railway (8/15). It does not alter Railway Terminal, expand its 500 MB persistent volume, publish C2 services, or use the Windows host as a target.
 
+## Verified disposable cloud runtime — 19 Nov 2026
+
+The [private BloodHound CE startup test](https://github.com/abdulstarzeki001-sketch/linux-terminal/actions/runs/44453942326) succeeded in GitHub Actions:
+PostgreSQL, Neo4j and BloodHound CE all reached `Healthy`, the login UI answered **HTTP 200** on `127.0.0.1:18080`, and the test found **no published database ports**. Containers and temporary data were destroyed after the test.
+
+This is executable proof for the **isolated Compose stack**, not a permanent installation or new owner-facing login URL. The STAR Railway production inventory stays at **8/15**. Real deployment requires a dedicated private VM, persisted encrypted data volumes, firewall/egress policy and approved resource budget.
+
 ## Precisely what is available
 
 | Tool | What is prepared here | What is NOT deployed |
@@ -16,7 +23,7 @@ This package prepares *private* runtime infrastructure for the seven tools not d
 
 ## Safety prerequisites
 
-**Use a dedicated isolated Linux lab VM** for BloodHound CE (at least 12 GB *available* RAM and 30 GB free disk, with extra margin for actual datasets), Docker Engine and Compose. Host must block inbound traffic except an operator-approved tunnel. No default passwords. BloodHound and databases communicate over `internal: true` Docker network; only the UI binds to `127.0.0.1:18080`, which cannot be reached directly over the public network.
+**Use a dedicated isolated Linux lab VM** for BloodHound CE (at least 12 GB *available* RAM and 30 GB free disk, with extra margin for actual datasets), Docker Engine and Compose. Host must block inbound traffic except an operator-approved tunnel. No default passwords. BloodHound and databases communicate over the `internal: true` Docker network; the BloodHound app additionally attaches to a normal `bh-ui` bridge because Docker 29 may ignore localhost port publishing from internal-only networks. Only the UI binds to `127.0.0.1:18080`, which cannot be reached directly from the public network. The app's separate UI bridge may permit outbound access; use a host firewall or dedicated egress policy if strict no-outbound containment is required. PostgreSQL and Neo4j remain on the private internal network and have no published ports.
 
 `preflight.sh` checks Docker, resources and the presence (not values) of secrets; it will reject STAR's current 3.8 GB WSL allocation and Railway's 500 MB volume.
 

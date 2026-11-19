@@ -84,6 +84,10 @@ jobs:
           assert ports[0]['host_ip']=='127.0.0.1'
           assert int(ports[0]['published'])==18080
           assert cfg['networks']['bh-private']['internal'] is True
+          assert cfg['networks']['bh-ui'].get('internal',False) is False
+          assert set(services['bh-postgres']['networks'])=={'bh-private'}
+          assert set(services['bh-neo4j']['networks'])=={'bh-private'}
+          assert set(services['bloodhound']['networks'])=={'bh-private','bh-ui'}
           caldera=services['caldera-image-check']
           assert caldera['network_mode']=='none'
           assert not caldera.get('ports')
