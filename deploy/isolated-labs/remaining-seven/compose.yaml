@@ -1,0 +1,86 @@
+# STAR private lab: real BloodHound CE database stack, with a disabled
+# by-default Caldera image-only verification service.
+# ALL SERVICE PROFILES OPT-IN. No C2 server or external listener by default.
+name: star-seven-lab
+services:
+  bh-postgres:
+    profiles: ["bloodhound"]
+    image: docker.io/library/postgres:18
+    environment:
+      POSTGRES_USER: bloodhound
+      POSTGRES_DB: bloodhound
+      POSTGRES_PASSWORD: ${STAR_BH_PG_PASSWORD:?Provide a unique secret externally}
+    volumes:
+      - bh-pg-data:/var/lib/postgresql
+    networks: [bh-private]
+    mem_limit: 2g
+    pids_limit: 256
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U bloodhound -d bloodhound -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bh-neo4j:
+    profiles: ["bloodhound"]
+    image: docker.io/library/neo4j:4.4.42
+    environment:
+      NEO4J_AUTH: neo4j/${STAR_BH_NEO4J_PASSWORD:?Provide a unique Neo4j secret externally}
+      NEO4J_dbms_allow__upgrade: "false"
+    volumes:
+      - bh-graph-data:/data
+    networks: [bh-private]
+    mem_limit: 6g
+    pids_limit: 512
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD-SHELL","wget -O /dev/null -q http://127.0.0.1:7474 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  bloodhound:
+    profiles: ["bloodhound"]
+    image: docker.io/specterops/bloodhound:latest
+    environment:
+      bhe_database_connection: "user=bloodhound password=${STAR_BH_PG_PASSWORD:?Set unique DB password} dbname=bloodhound host=bh-postgres"
+      bhe_neo4j_connection: "neo4j://neo4j:${STAR_BH_NEO4J_PASSWORD:?Set unique Neo4j password}@bh-neo4j:7687/"
+      bhe_graph_driver: neo4j
+      bhe_recreate_default_admin: "false"
+    ports:
+      # Strictly local on dedicated lab VM; access via approved SSH tunnel.
+      - "127.0.0.1:18080:8080"
+    networks: [bh-private]
+    volumes:
+      - bh-work:/work
+    depends_on:
+      bh-postgres: {condition: service_healthy}
+      bh-neo4j: {condition: service_healthy}
+    mem_limit: 4g
+    pids_limit: 512
+    security_opt: ["no-new-privileges:true"]
+    restart: "no"
+
+  caldera-image-check:
+    profiles: ["caldera"]
+    image: ghcr.io/mitre/caldera:5.2.0
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 512m
+    # Never launch C2 application or agents from shared infrastructure.
+    entrypoint: ["/bin/sh","-lc"]
+    command: ["echo 'CALDERA_IMAGE_VERIFIED_ONLY_NO_SERVER_OR_AGENTS'"]
+    restart: "no"
+
+networks:
+  bh-private:
+    internal: true
+volumes:
+  bh-pg-data:
+  bh-graph-data:
+  bh-work:
