@@ -1,3 +1,18 @@
+# Fixed upstream Ligolo-ng proxy only; never build or ship the agent.
+# No listener is started at build or startup. Run-time networking remains off
+# until an owner configures an authorized isolated training environment.
+FROM golang:1.25-bookworm AS ligolo_builder
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+RUN git clone -q --depth 1 --branch v0.9.2 \
+      https://github.com/nicocha30/ligolo-ng.git /tmp/ligolo-ng \
+  && cd /tmp/ligolo-ng \
+  && mkdir -p /out \
+  && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath \
+      -ldflags="-s -w" -o /out/ligolo-proxy ./cmd/proxy/main.go \
+  && test -s /out/ligolo-proxy \
+  && chmod 0755 /out/ligolo-proxy
+
 FROM python:3.12.16-slim-bookworm AS python312
 
 # Build NetExec from a fixed upstream tag in a throwaway Bookworm toolchain.
@@ -20,6 +35,8 @@ RUN git clone --depth 1 --branch v1.5.1 \
     && test -x /opt/netexec312/bin/nxc
 
 FROM node:24-bookworm
+COPY --from=ligolo_builder /out/ligolo-proxy /usr/local/bin/ligolo-proxy
+RUN test -x /usr/local/bin/ligolo-proxy
 COPY --from=netexec_builder /opt/netexec312 /opt/netexec312
 # The Python 3.12 runtime is separate from system Python 3.11.
 COPY --from=python312 /usr/local/bin/python3.12 /usr/local/bin/python3.12
