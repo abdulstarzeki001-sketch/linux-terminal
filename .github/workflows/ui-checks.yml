@@ -49,6 +49,7 @@ jobs:
           bash -n test/certipy-image-smoke.sh
           bash -n test/approved-linux-tools-smoke.sh
           bash -n test/netexec-image-smoke.sh
+          bash -n test/ligolo-image-smoke.sh
           node --check server/tool-ops.js
           bash -n server/apt-wrapper.sh
           bash -n server/persist-cli.sh
@@ -95,6 +96,8 @@ jobs:
         run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/approved-linux-tools-smoke.sh
       - name: Verify NetExec 1.5.1 local CLI and live inventory (no target traffic)
         run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/netexec-image-smoke.sh
+      - name: Verify Ligolo-ng 0.9.2 local CLI (no tunnel or network listeners)
+        run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --network none --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/ligolo-image-smoke.sh
       - name: Exercise authenticated real HTTP grading and persistence
         run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/training-http.sh
       - name: Real HTTP owner tools catalog, AI dispatch and persistent results
