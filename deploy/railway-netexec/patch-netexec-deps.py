@@ -18,7 +18,7 @@ pairs={
     '"certipy-ad @ git+https://github.com/Pennyw0rth/Certipy"': '"certipy-ad==5.1.0"',
     '"impacket @ git+https://github.com/fortra/impacket"': '"impacket==0.13.1"',
     '"oscrypto @ git+https://github.com/wbond/oscrypto"': '"oscrypto==1.3.0"',
-    '"pynfsclient @ git+https://github.com/Pennyw0rth/NfsClient"': '"pynfsclient==1.0.6"',
+    '"pynfsclient @ git+https://github.com/Pennyw0rth/NfsClient"': '"pynfsclient==0.1.5"',
 }
 for old,new in pairs.items():
     if data.count(old)!=1:
