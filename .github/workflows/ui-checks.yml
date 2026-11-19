@@ -51,6 +51,8 @@ jobs:
           bash -n test/netexec-image-smoke.sh
           bash -n test/ligolo-image-smoke.sh
           bash -n test/syzkaller-image-smoke.sh
+          bash -n server/ghidra-headless.sh
+          bash -n test/ghidra-image-smoke.sh
           node --check server/tool-ops.js
           bash -n server/apt-wrapper.sh
           bash -n server/persist-cli.sh
@@ -101,6 +103,8 @@ jobs:
         run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --network none --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/ligolo-image-smoke.sh
       - name: Verify pinned syz-manager binary and safe local usage (no QEMU or fuzzing)
         run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --network none --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/syzkaller-image-smoke.sh
+      - name: Verify Ghidra 12.0.4 offline headless usage, Java 21 and inventory
+        run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --network none --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/ghidra-image-smoke.sh
       - name: Exercise authenticated real HTTP grading and persistence
         run: docker run --rm -v "$PWD/test:/tmp/star-tests:ro" --entrypoint /bin/bash star-kali-terminal:ci /tmp/star-tests/training-http.sh
       - name: Real HTTP owner tools catalog, AI dispatch and persistent results
