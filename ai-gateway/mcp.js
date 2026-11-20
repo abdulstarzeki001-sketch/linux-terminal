@@ -1,10 +1,12 @@
 'use strict';
 const crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:path'),{isIP}=require('node:net');
+const {exercise:labExercise,triage:labTriage}=require('./redteam-lab');
 const tools=[
 ['star_status',{}],['memory_save',{text:{type:'string'},tag:{type:'string'}}],['memory_search',{query:{type:'string'}}],['memory_delete',{id:{type:'string'}}],
 ['agent_rules_get',{}],['github_read_file',{path:{type:'string'}}],['github_scan_file',{path:{type:'string'}}],
 ['github_stage_patch',{path:{type:'string'},content:{type:'string'},reason:{type:'string'}}],['github_pending_patches',{}],
-['web_check_headers',{url:{type:'string'}}],['browserling_request',{url:{type:'string'},reason:{type:'string'}}]
+['web_check_headers',{url:{type:'string'}}],['browserling_request',{url:{type:'string'},reason:{type:'string'}}],
+['redteam_lab_scenario',{scenario:{type:'string'}}],['redteam_log_triage',{events:{type:'array',items:{type:'object'}}}]
 ].map(([name,properties])=>({name,description:{
 star_status:'Read configuration and enabled capabilities; does not leak secrets.',
 memory_save:'Save a user-selected memory fact for future chats (no credentials).',
@@ -15,8 +17,10 @@ github_scan_file:'Static code review of one safe file from configured GitHub rep
 github_stage_patch:'Stage replacement source for human review; DOES NOT write to GitHub.',
 github_pending_patches:'List staged code edits and PR URLs.',
 web_check_headers:'Passive HEAD check of an explicitly authorized HTTPS host.',
-browserling_request:'Queue an authorized browser-inspection request; DOES NOT open a paid Browserling session.'
-}[name],inputSchema:{type:'object',properties,additionalProperties:false,required:{memory_save:['text'],memory_search:['query'],memory_delete:['id'],github_read_file:['path'],github_scan_file:['path'],github_stage_patch:['path','content'],web_check_headers:['url'],browserling_request:['url']}[name]||[]}}));
+browserling_request:'Queue an authorized browser-inspection request; DOES NOT open a paid Browserling session.',
+redteam_lab_scenario:'Generate synthetic offline attack telemetry and defensive playbook. No execution or networking.',
+redteam_log_triage:'Evaluate sanitized telemetry events for common suspicious behaviors. No commands are run.'
+}[name],inputSchema:{type:'object',properties,additionalProperties:false,required:{memory_save:['text'],memory_search:['query'],memory_delete:['id'],github_read_file:['path'],github_scan_file:['path'],github_stage_patch:['path','content'],web_check_headers:['url'],browserling_request:['url'],redteam_lab_scenario:['scenario'],redteam_log_triage:['events']}[name]||[]}}));
 const id=()=>crypto.randomBytes(12).toString('hex');
 const eq=(a,b)=>typeof a==='string'&&typeof b==='string'&&b.length>=32&&crypto.timingSafeEqual(crypto.createHash('sha256').update(a).digest(),crypto.createHash('sha256').update(b).digest());
 const secret=s=>/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|(?:gh[pousr]_|github_pat_|sk-)[A-Za-z0-9_-]{20,}|(?:api[_-]?key|password|secret|token)\s*[=:]\s*["']?[A-Za-z0-9_-]{16,}/i.test(s);
@@ -49,6 +53,8 @@ function createMcpHandler({env=process.env,fetchFn=globalThis.fetch,modelConfigu
     return {contents,sha:f.sha};
   }
   async function runTool(name,a={}){
+    if(name==='redteam_lab_scenario')return labExercise(a.scenario);
+    if(name==='redteam_log_triage')return labTriage(a.events);
     if(name==='star_status')return {backendConfigured:!!modelConfigured(),repo:repo||null,githubReadEnabled:!!repo,githubWriteReady:!!(repo&&env.STAR_GITHUB_TOKEN&&env.STAR_REVIEW_KEY),
       storagePath:file,browserlingLiveAPI:false,allowedWebHosts:env.STAR_AUTHORIZED_HOSTS||'',note:'MCP tools do not themselves host a GPU model'};
     if(name==='agent_rules_get')return {rules:String(env.STAR_CUSTOM_INSTRUCTIONS||'').slice(0,3000),note:'Rules are set by service administrator, not by model.'};
