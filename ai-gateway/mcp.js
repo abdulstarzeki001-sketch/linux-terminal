@@ -87,6 +87,9 @@ function createMcpHandler({env=process.env,fetchFn=globalThis.fetch,modelConfigu
         output(res,404,{error:'not_found'});}catch(e){output(res,400,{error:String(e.message).slice(0,200)});}return;
     }
     if(u!=='/mcp'){output(res,404,{error:'not_found'});return;}
+    if(req.headers.origin && !String(env.STAR_MCP_ALLOWED_ORIGINS||'').split(',').map(x=>x.trim()).includes(req.headers.origin)){
+      output(res,403,{error:'origin_not_allowed'});return;
+    }
     if(!eq(String(req.headers.authorization||'').replace(/^Bearer\s+/i,''),env.STAR_MINIS_MCP_KEY)){output(res,401,{error:'unauthorized'});return;}
     if(req.method!=='POST'){res.writeHead(405,{Allow:'POST'});res.end();return;}
     let q;try{q=await parse(req);}catch{output(res,400,err(null,-32700,'Invalid JSON'));return;}
