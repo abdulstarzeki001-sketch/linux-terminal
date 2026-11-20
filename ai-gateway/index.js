@@ -5,6 +5,7 @@ const http=require('node:http');
 const crypto=require('node:crypto');
 const {askAI,isConfigured,MAX_PROMPT}=require('./provider');
 const {createMinisHandler}=require('./minis');
+const {completeForMinis}=require('./minis-provider');
 const {createMcpHandler}=require('./mcp');
 
 function keyMatches(value,expected) {
@@ -29,6 +30,7 @@ function createGateway({env=process.env,fetchFn=globalThis.fetch}={}) {
   const handleMinis=createMinisHandler({
     env,
     ask:(prompt,{signal})=>askAI(prompt,{env,fetchFn,signal}),
+    complete:(body,{signal})=>completeForMinis(body,{env,fetchFn,signal}),
     configured:()=>isConfigured(env)
   });
   const mcp=createMcpHandler({env,fetchFn,modelConfigured:()=>isConfigured(env)});
