@@ -2,8 +2,12 @@
 // STAR AI Gateway. Deploy as a separate Railway service on the PRIVATE
 // railway.internal network. Only this process has the provider API key.
 const http=require('node:http');
+const fs=require('node:fs');
 const crypto=require('node:crypto');
 const {askAI,isConfigured,MAX_PROMPT}=require('./provider');
+const {createMinisHandler}=require('./minis');
+const {completeForMinis}=require('./minis-provider');
+const {createMcpHandler}=require('./mcp');
 
 function keyMatches(value,expected) {
   if(typeof expected!=='string'||expected.length<32||
@@ -24,7 +28,20 @@ function json(res,status,data) {
 function createGateway({env=process.env,fetchFn=globalThis.fetch}={}) {
   const limit=Math.min(60,Math.max(1,Number(env.AI_MAX_PER_HOUR)||30));
   let windowStart=Date.now(),count=0,inFlight=0;
+  const handleMinis=createMinisHandler({
+    env,
+    ask:(prompt,{signal})=>askAI(prompt,{env,fetchFn,signal}),
+    complete:(body,{signal})=>completeForMinis(body,{env,fetchFn,signal}),
+    configured:()=>isConfigured(env)
+  });
+  const mcp=createMcpHandler({env,fetchFn,modelConfigured:()=>isConfigured(env)});
   return http.createServer(async(req,res)=>{
+    if(req.url==='/star-review' && req.method==='GET'){
+      res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'"});
+      res.end(fs.readFileSync(require('node:path').join(__dirname,'review.html')));return;
+    }
+    if(req.url?.split('?')[0]==='/mcp'||req.url?.startsWith('/star-review/'))return mcp.handler(req,res);
+    if(req.url?.startsWith('/v1/'))return handleMinis(req,res);
     if(req.url==='/health'&&req.method==='GET'){
       json(res,200,{ok:true,aiConfigured:isConfigured(env)});
       return;

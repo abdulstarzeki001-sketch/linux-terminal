@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STAR AI — مراجعة التعديلات</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{font-family:system-ui,Tahoma,sans-serif;background:#0b1220;color:#e8f0ff;max-width:800px;margin:auto;padding:22px}
+h1{font-size:1.7rem}p{color:#b5c4d7;line-height:1.65}input,button{font:inherit;border-radius:10px;padding:13px;border:1px solid #455778;color:#f0f6ff;background:#1d2a40}
+input{width:100%}button{cursor:pointer;margin:9px 0;background:#2256a0}button:hover{background:#3474d2}
+article{padding:16px;border:1px solid #394c63;border-radius:12px;margin-top:14px;background:#121e31}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#0b1424;padding:12px;border-radius:8px;font-size:.85rem}
+small{color:#acc0d4}a{color:#80bcff}
+</style>
+</head><body>
+<h1>STAR AI — مراجعة GitHub</h1>
+<p>التعديلات التي يجهزها Agent لا تُرفع إلى GitHub قبل موافقتك هنا. استخدم مفتاح <code>STAR_REVIEW_KEY</code> الخاص بك؛ لا تستخدم مفتاح Minis أو GitHub Token.</p>
+<input id="key" type="password" autocomplete="off" placeholder="مفتاح المراجعة"><button id="load">عرض الطلبات</button>
+<section id="items" aria-live="polite"></section>
+<small>الاعتماد ينشئ فرعاً منفصلاً وDraft Pull Request فقط. لا يدمج في main ولا ينشر الخادم تلقائياً.</small>
+<script>
+const input=document.getElementById('key'),area=document.getElementById('items');
+document.getElementById('load').onclick=load;
+async function api(route,opt={}){
+  const response=await fetch('/star-review/'+route,{...opt,headers:{'x-star-review-key':input.value,'Content-Type':'application/json',...(opt.headers||{})}});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'Request failed');
+  return data;
+}
+async function load(){
+  area.textContent='جاري التحميل…';
+  try{
+    const data=await api('list');
+    area.replaceChildren();
+    if(!data.proposals.length){area.textContent='لا توجد طلبات حالياً';return;}
+    for(const p of data.proposals){
+      const box=document.createElement('article');
+      const title=document.createElement('strong');title.textContent=p.kind+' — '+(p.path||p.url||p.id);box.append(title);
+      const preview=document.createElement('pre');preview.textContent=JSON.stringify({id:p.id,status:p.status,reason:p.reason,content_preview:p.content?String(p.content).slice(0,4000):null},null,2);box.append(preview);
+      if(p.url&&p.status==='draft_pr'){const a=document.createElement('a');a.textContent='فتح Pull Request';a.href=p.url;a.rel='noopener noreferrer';a.target='_blank';box.append(a);}
+      if(p.kind==='github_patch'&&p.status==='pending'){
+        const btn=document.createElement('button');btn.textContent='اعتماد وإنشاء Draft PR';
+        btn.onclick=async()=>{
+          if(!confirm('سيتم إنشاء فرع وPull Request على GitHub. هل تعتمد هذا التغيير؟'))return;
+          try{const result=await api('approve',{method:'POST',body:JSON.stringify({id:p.id,confirm:'APPROVE_DRAFT_PR'})});alert('تم إنشاء: '+result.url);load();}
+          catch(e){alert('فشل الاعتماد: '+e.message);}
+        };box.append(btn);
+      }area.append(box);
+    }
+  }catch(e){area.textContent='تعذر عرض الطلبات: '+e.message;}
+}
+</script>
+</body></html>
