@@ -3,7 +3,7 @@
 // This does not add GPU hosting or bypass upstream provider requirements.
 const crypto = require('node:crypto');
 const MODEL_ID = 'star-ai';
-const MAX_BODY_BYTES = 16384;
+const MAX_BODY_BYTES = 65536;
 const MAX_PROMPT = 4000;
 
 function safeEqual(left, right) {
@@ -37,9 +37,9 @@ function normalizePrompt(messages) {
   const prompt = parts.join('\n\n') + '\n\nASSISTANT:';
   return prompt.length <= MAX_PROMPT ? prompt : null;
 }
-function createMinisHandler({env = process.env, ask, configured}) {
-  if (typeof ask !== 'function' || typeof configured !== 'function')
-    throw new TypeError('ask and configured must be functions');
+function createMinisHandler({env = process.env, ask, complete, configured}) {
+  if ((typeof ask !== 'function' && typeof complete !== 'function') || typeof configured !== 'function')
+    throw new TypeError('ask or complete and configured must be functions');
   let since = Date.now(), count = 0, active = 0;
   return async (req, res) => {
     const path = req.url?.split('?')[0];
@@ -82,8 +82,8 @@ function createMinisHandler({env = process.env, ask, configured}) {
     if (body?.model !== MODEL_ID) {
       apiError(res, 400, 'unknown_model', 'Select the model ID star-ai'); return;
     }
-    const prompt = normalizePrompt(body.messages);
-    if (!prompt) {
+    const prompt = typeof complete === 'function' ? null : normalizePrompt(body.messages);
+    if (typeof complete !== 'function' && !prompt) {
       apiError(res, 400, 'invalid_messages', 'Provide up to 32 text messages within 4000 characters'); return;
     }
     if (Date.now() - since >= 3600000) { since = Date.now(); count = 0; }
@@ -95,8 +95,11 @@ function createMinisHandler({env = process.env, ask, configured}) {
     const ctrl = new AbortController();
     res.on('close', () => { if (!res.writableEnded) ctrl.abort(); });
     try {
-      const answer = await ask(prompt, {signal: ctrl.signal});
-      if (typeof answer !== 'string' || !answer.trim()) throw new Error('empty');
+      const completion = typeof complete === 'function' ? await complete(body, {signal: ctrl.signal}) : null;
+      const answer = completion ? completion.message?.content : await ask(prompt, {signal: ctrl.signal});
+      const message = completion?.message || {role:'assistant',content:answer};
+      const finish = completion?.finish_reason || 'stop';
+      if ((!answer || typeof answer !== 'string') && !message.tool_calls?.length) throw new Error('empty');
       if (res.writableEnded || res.destroyed) return;
       const base = {id: 'chatcmpl-' + crypto.randomBytes(8).toString('hex'), created: Math.floor(Date.now()/1000), model: MODEL_ID};
       if (body.stream === true) {
@@ -105,11 +108,12 @@ function createMinisHandler({env = process.env, ask, configured}) {
           'Cache-Control': 'no-cache, no-store',
           'X-Accel-Buffering': 'no',
         });
-        res.write('data: ' + JSON.stringify({...base, object: 'chat.completion.chunk', choices: [{index: 0, delta: {role: 'assistant', content: answer}, finish_reason: null}]}) + '\n\n');
-        res.write('data: ' + JSON.stringify({...base, object: 'chat.completion.chunk', choices: [{index: 0, delta: {}, finish_reason: 'stop'}]}) + '\n\n');
+        const delta = {role:'assistant', ...(message.content?{content:message.content}:{}), ...(message.tool_calls?.length?{tool_calls:message.tool_calls.map((tc,index)=>({index,...tc}))}:{})};
+        res.write('data: ' + JSON.stringify({...base, object: 'chat.completion.chunk', choices: [{index: 0, delta, finish_reason: null}]}) + '\n\n');
+        res.write('data: ' + JSON.stringify({...base, object: 'chat.completion.chunk', choices: [{index: 0, delta: {}, finish_reason: finish}]}) + '\n\n');
         res.end('data: [DONE]\n\n');
       } else {
-        json(res, 200, {...base, object: 'chat.completion', choices: [{index: 0, message: {role: 'assistant', content: answer}, finish_reason: 'stop'}]});
+        json(res, 200, {...base, object: 'chat.completion', choices: [{index: 0, message, finish_reason: finish}]});
       }
     } catch (error) {
       if (!res.writableEnded && !res.destroyed) {
