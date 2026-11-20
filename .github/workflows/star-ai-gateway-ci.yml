@@ -4,6 +4,7 @@ on:
     paths:
       - 'ai-gateway/**'
       - 'test/minis*.test.js'
+      - 'test/redteam-lab.test.js'
       - '.github/workflows/star-ai-gateway-ci.yml'
   push:
     branches:
@@ -11,6 +12,7 @@ on:
     paths:
       - 'ai-gateway/**'
       - 'test/minis*.test.js'
+      - 'test/redteam-lab.test.js'
       - '.github/workflows/star-ai-gateway-ci.yml'
 permissions:
   contents: read
@@ -27,4 +29,4 @@ jobs:
         run: |
           for f in ai-gateway/*.js; do node --check "$f"; done
       - name: Authenticated Minis and MCP tests
-        run: node --test test/minis-api.test.js test/minis-tools.test.js
+        run: node --test test/minis-api.test.js test/minis-tools.test.js test/redteam-lab.test.js
