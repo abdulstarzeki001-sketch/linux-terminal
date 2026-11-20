@@ -4,6 +4,7 @@
 const http=require('node:http');
 const crypto=require('node:crypto');
 const {askAI,isConfigured,MAX_PROMPT}=require('./provider');
+const {createMinisHandler}=require('./minis');
 
 function keyMatches(value,expected) {
   if(typeof expected!=='string'||expected.length<32||
@@ -24,7 +25,13 @@ function json(res,status,data) {
 function createGateway({env=process.env,fetchFn=globalThis.fetch}={}) {
   const limit=Math.min(60,Math.max(1,Number(env.AI_MAX_PER_HOUR)||30));
   let windowStart=Date.now(),count=0,inFlight=0;
+  const handleMinis=createMinisHandler({
+    env,
+    ask:(prompt,{signal})=>askAI(prompt,{env,fetchFn,signal}),
+    configured:()=>isConfigured(env)
+  });
   return http.createServer(async(req,res)=>{
+    if(req.url?.startsWith('/v1/'))return handleMinis(req,res);
     if(req.url==='/health'&&req.method==='GET'){
       json(res,200,{ok:true,aiConfigured:isConfigured(env)});
       return;
