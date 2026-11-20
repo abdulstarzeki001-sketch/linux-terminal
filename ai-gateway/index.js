@@ -5,6 +5,7 @@ const http=require('node:http');
 const crypto=require('node:crypto');
 const {askAI,isConfigured,MAX_PROMPT}=require('./provider');
 const {createMinisHandler}=require('./minis');
+const {createMcpHandler}=require('./mcp');
 
 function keyMatches(value,expected) {
   if(typeof expected!=='string'||expected.length<32||
@@ -30,7 +31,9 @@ function createGateway({env=process.env,fetchFn=globalThis.fetch}={}) {
     ask:(prompt,{signal})=>askAI(prompt,{env,fetchFn,signal}),
     configured:()=>isConfigured(env)
   });
+  const mcp=createMcpHandler({env,fetchFn,modelConfigured:()=>isConfigured(env)});
   return http.createServer(async(req,res)=>{
+    if(req.url?.split('?')[0]==='/mcp'||req.url?.startsWith('/star-review/'))return mcp.handler(req,res);
     if(req.url?.startsWith('/v1/'))return handleMinis(req,res);
     if(req.url==='/health'&&req.method==='GET'){
       json(res,200,{ok:true,aiConfigured:isConfigured(env)});
