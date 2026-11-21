@@ -1,19 +1,46 @@
 'use strict';
 const {selectedProvider,isConfigured,accessHeaders}=require('./provider');
+// The Minis client may send text content parts and large tool schemas.
+ // Keep limits finite, but do not reject ordinary multi-tool conversations.
+function messageText(content){
+  if(content===null||content===undefined)return '';
+  if(typeof content==='string')return content;
+  if(!Array.isArray(content)||content.length>64)throw Error('AI_INVALID_INPUT');
+  return content.map(part=>{
+    if(typeof part==='string')return part;
+    if(!part||!['text','input_text'].includes(part.type)||typeof part.text!=='string')
+      throw Error('AI_INVALID_INPUT'); // images/binary need an explicit future adapter
+    return part.text;
+  }).join('\n');
+}
 function checkedMessages(messages){
-  if(!Array.isArray(messages)||!messages.length||messages.length>48)throw Error('AI_INVALID_INPUT');
-  if(JSON.stringify(messages).length>20000)throw Error('AI_INVALID_INPUT');
-  for(const m of messages){
-    if(!m||!['system','user','assistant','tool'].includes(m.role))throw Error('AI_INVALID_INPUT');
-    if(m.content!==null&&m.content!==undefined&&typeof m.content!=='string')throw Error('AI_INVALID_INPUT');
-    if(m.role==='tool'&&typeof m.tool_call_id!=='string')throw Error('AI_INVALID_INPUT');
-  }
-  return messages;
+  if(!Array.isArray(messages)||!messages.length||messages.length>96)throw Error('AI_INVALID_INPUT');
+  if(JSON.stringify(messages).length>80000)throw Error('AI_INVALID_INPUT');
+  return messages.map(m=>{
+    if(!m||!['system','developer','user','assistant','tool'].includes(m.role))
+      throw Error('AI_INVALID_INPUT');
+    if(m.role==='tool'&&(!m.tool_call_id||typeof m.tool_call_id!=='string'))
+      throw Error('AI_INVALID_INPUT');
+    if(m.tool_calls!==undefined){
+      if(m.role!=='assistant'||!Array.isArray(m.tool_calls)||m.tool_calls.length>32)
+        throw Error('AI_INVALID_INPUT');
+      for(const c of m.tool_calls)
+        if(c?.type!=='function'||typeof c.id!=='string'||!c.id||
+           typeof c.function?.name!=='string'||!c.function.name||
+           (c.function.arguments!==undefined&&typeof c.function.arguments!=='string'))
+          throw Error('AI_INVALID_INPUT');
+    }
+    return {...m,content:messageText(m.content)};
+  });
 }
 function checkedTools(tools){
   if(tools===undefined)return [];
-  if(!Array.isArray(tools)||tools.length>30||JSON.stringify(tools).length>22000)throw Error('AI_INVALID_INPUT');
-  for(const t of tools)if(t?.type!=='function'||!/^[-A-Za-z0-9_]{1,64}$/.test(t.function?.name||'')||typeof t.function?.parameters!=='object'||!t.function.parameters)throw Error('AI_INVALID_INPUT');
+  if(!Array.isArray(tools)||tools.length>64||JSON.stringify(tools).length>96000)
+    throw Error('AI_INVALID_INPUT');
+  for(const t of tools)
+    if(t?.type!=='function'||!/^[-A-Za-z0-9_]{1,64}$/.test(t.function?.name||'')||
+       typeof t.function?.parameters!=='object'||!t.function.parameters)
+      throw Error('AI_INVALID_INPUT');
   return tools;
 }
 function toResponsesInput(messages){
@@ -85,7 +112,7 @@ async function completeForMinis(request,{env=process.env,fetchFn=globalThis.fetc
       model:env.AI_MODEL,instructions:prompt,input:toResponsesInput(messages),store:false,max_output_tokens:1500,
       ...(tools.length?{tools:tools.map(x=>({type:'function',name:x.function.name,description:String(x.function.description||'').slice(0,500),parameters:x.function.parameters})),tool_choice:'auto'}:{})
     }:{
-      model:env.AI_MODEL,messages:[{role:'system',content:prompt},...messages],stream:false,max_tokens:1500,
+      model:env.AI_MODEL,messages:[{role:'system',content:prompt},...messages.map(m=>m.role==='developer'?{...m,role:'system'}:m)],stream:false,max_tokens:1500,
       ...(tools.length?{tools,tool_choice:'auto'}:{})
     };
     const response=await fetchFn(provider.url,{method:'POST',signal:ctrl.signal,redirect:'error',headers:{
@@ -103,4 +130,4 @@ async function completeForMinis(request,{env=process.env,fetchFn=globalThis.fetc
     throw Error('AI_NETWORK_ERROR');
   }finally{clearTimeout(timeout);signal?.removeEventListener('abort',abort);}
 }
-module.exports={completeForMinis,checkedMessages,checkedTools,toResponsesInput,parseResponses,parseChat,classifyUpstreamError};
+module.exports={completeForMinis,checkedMessages,checkedTools,messageText,toResponsesInput,parseResponses,parseChat,classifyUpstreamError};
