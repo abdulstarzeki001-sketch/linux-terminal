@@ -50,6 +50,28 @@ function parseChat(data){
 function defaultRules(env){
   return 'You are STAR AI, an Iraqi Arabic-first expert assistant for software engineering and authorized cybersecurity work. Be precise, effective and technically detailed. Do not claim to run tools that were not executed. Use provided function tools when warranted and respect their scope, provenance and result.\n'+String(env.STAR_CUSTOM_INSTRUCTIONS||'').slice(0,2500);
 }
+// Return only a fixed, non-sensitive error class. Never forward provider error text.
+async function classifyUpstreamError(response){
+  const status=response.status;
+  if(status===401||status===403)return 'AI_AUTH_FAILED';
+  if(status===402)return 'AI_BILLING_REQUIRED';
+  let code='';
+  if(status===400||status===404||status===422||status===429){
+    try{
+      const payload=await response.json();
+      code=String(payload?.error?.code||payload?.error?.type||'').slice(0,100);
+    }catch(_){}
+  }
+  if(status===429){
+    return /insufficient_quota|quota_exceeded|billing_required|exceeded_quota/i.test(code)
+      ?'AI_QUOTA_EXCEEDED':'AI_RATE_LIMIT';
+  }
+  if(status===400||status===404||status===422){
+    return /model_not_found|unsupported_model|invalid_model|model_not_available/i.test(code)
+      ?'AI_MODEL_ERROR':'AI_REQUEST_REJECTED';
+  }
+  return 'AI_UPSTREAM_ERROR';
+}
 async function completeForMinis(request,{env=process.env,fetchFn=globalThis.fetch,signal}={}){
   if(!isConfigured(env))throw Error('AI_NOT_CONFIGURED');
   const messages=checkedMessages(request.messages),tools=checkedTools(request.tools);
@@ -71,7 +93,7 @@ async function completeForMinis(request,{env=process.env,fetchFn=globalThis.fetc
       Authorization:'Bearer '+(provider.name==='selfhosted'?env.AI_SELFHOST_API_KEY:env.AI_API_KEY),
       ...(provider.name==='selfhosted'?(accessHeaders(env)||{}):{})
     },body:JSON.stringify(body)});
-    if(!response.ok){if([401,403].includes(response.status))throw Error('AI_AUTH_FAILED');if(response.status===429)throw Error('AI_RATE_LIMIT');throw Error('AI_UPSTREAM_ERROR');}
+    if(!response.ok)throw Error(await classifyUpstreamError(response));
     const data=await response.json(),message=isResponses?parseResponses(data):parseChat(data);
     if(!message.content&&!message.tool_calls?.length)throw Error('AI_EMPTY_RESPONSE');
     return {message,finish_reason:message.tool_calls?.length?'tool_calls':'stop'};
@@ -81,4 +103,4 @@ async function completeForMinis(request,{env=process.env,fetchFn=globalThis.fetc
     throw Error('AI_NETWORK_ERROR');
   }finally{clearTimeout(timeout);signal?.removeEventListener('abort',abort);}
 }
-module.exports={completeForMinis,checkedMessages,checkedTools,toResponsesInput,parseResponses,parseChat};
+module.exports={completeForMinis,checkedMessages,checkedTools,toResponsesInput,parseResponses,parseChat,classifyUpstreamError};

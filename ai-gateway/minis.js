@@ -118,8 +118,28 @@ function createMinisHandler({env = process.env, ask, complete, configured}) {
     } catch (error) {
       if (!res.writableEnded && !res.destroyed) {
         // Never expose the upstream API key, provider URL, or raw exception.
-        const code = /^AI_[A-Z_]+$/.test(error?.message || '') ? error.message : 'upstream_error';
-        apiError(res, code === 'AI_RATE_LIMIT' ? 429 : 502, code, 'Model backend unavailable');
+        const code = /^AI_[A-Z_]+$/.test(error?.message || '') ? error.message : 'AI_UPSTREAM_ERROR';
+        const statuses = {
+          AI_AUTH_FAILED:503, AI_BILLING_REQUIRED:402,
+          AI_QUOTA_EXCEEDED:429, AI_RATE_LIMIT:429,
+          AI_MODEL_ERROR:424, AI_REQUEST_REJECTED:424,
+          AI_TIMEOUT:504
+        };
+        const descriptions = {
+          AI_AUTH_FAILED:'Upstream model API key rejected; check AI_API_KEY on Railway',
+          AI_BILLING_REQUIRED:'Upstream model billing is required',
+          AI_QUOTA_EXCEEDED:'Upstream model quota or credits exhausted',
+          AI_RATE_LIMIT:'Upstream provider rate limit reached',
+          AI_MODEL_ERROR:'Upstream model is unavailable; check AI_MODEL on Railway',
+          AI_REQUEST_REJECTED:'Upstream provider rejected the request format or model settings',
+          AI_NETWORK_ERROR:'Upstream model network error',
+          AI_TIMEOUT:'Upstream model timed out',
+          AI_UPSTREAM_ERROR:'Upstream model provider is unavailable'
+        };
+        const status=statuses[code]||502;
+        // Error codes only. Never log API keys, request text or raw provider errors.
+        console.warn('[STAR AI] Minis provider failure:',code,'client HTTP',status);
+        apiError(res,status,code,descriptions[code]||'Upstream model provider is unavailable');
       }
     } finally { active--; }
   };
