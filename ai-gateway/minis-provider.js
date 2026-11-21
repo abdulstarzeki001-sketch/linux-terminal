@@ -1,20 +1,56 @@
 'use strict';
 const {selectedProvider,isConfigured,accessHeaders}=require('./provider');
+// Minis sends tool-rich agent contexts; avoid rejecting valid larger tool lists.
+// The outer HTTP handler still enforces a strict 64-KiB request-body limit.
+const MAX_AGENT_MESSAGES=96;
+const MAX_AGENT_TOOLS=96;
+function checkSize(value,max,code){
+  let bytes;
+  try{bytes=Buffer.byteLength(JSON.stringify(value),'utf8');}
+  catch(_){throw Error(code);}
+  if(bytes>max)throw Error(code);
+}
+function normalizeContent(content){
+  if(content===undefined||content===null||typeof content==='string')return content;
+  // Chat Completions permits text-part arrays. Images/audio are not handled by
+  // this gateway and must fail explicitly instead of being silently discarded.
+  if(Array.isArray(content)&&content.every(x=>x&&x.type==='text'&&typeof x.text==='string'))
+    return content.map(x=>x.text).join('\n');
+  throw Error('AI_UNSUPPORTED_MODALITY');
+}
 function checkedMessages(messages){
-  if(!Array.isArray(messages)||!messages.length||messages.length>48)throw Error('AI_INVALID_INPUT');
-  if(JSON.stringify(messages).length>20000)throw Error('AI_INVALID_INPUT');
-  for(const m of messages){
-    if(!m||!['system','user','assistant','tool'].includes(m.role))throw Error('AI_INVALID_INPUT');
-    if(m.content!==null&&m.content!==undefined&&typeof m.content!=='string')throw Error('AI_INVALID_INPUT');
-    if(m.role==='tool'&&typeof m.tool_call_id!=='string')throw Error('AI_INVALID_INPUT');
-  }
-  return messages;
+  if(!Array.isArray(messages)||!messages.length)throw Error('AI_INVALID_MESSAGE_FORMAT');
+  if(messages.length>MAX_AGENT_MESSAGES)throw Error('AI_TOO_MANY_MESSAGES');
+  checkSize(messages,57000,'AI_MESSAGE_TOO_LARGE');
+  return messages.map(m=>{
+    if(!m||!['system','developer','user','assistant','tool'].includes(m.role))
+      throw Error('AI_INVALID_MESSAGE_FORMAT');
+    const content=normalizeContent(m.content);
+    if(m.role==='tool'&&(typeof m.tool_call_id!=='string'||!m.tool_call_id.trim()))
+      throw Error('AI_INVALID_TOOL_MESSAGE');
+    if(m.role==='assistant'&&m.tool_calls!==undefined){
+      if(!Array.isArray(m.tool_calls)||m.tool_calls.length>20||
+        m.tool_calls.some(x=>x?.type!=='function'||typeof x.id!=='string'||
+          !x.id||typeof x.function?.name!=='string'||
+          typeof x.function?.arguments!=='string'))
+        throw Error('AI_INVALID_TOOL_MESSAGE');
+    }
+    return {...m,content};
+  });
 }
 function checkedTools(tools){
-  if(tools===undefined)return [];
-  if(!Array.isArray(tools)||tools.length>30||JSON.stringify(tools).length>22000)throw Error('AI_INVALID_INPUT');
-  for(const t of tools)if(t?.type!=='function'||!/^[-A-Za-z0-9_]{1,64}$/.test(t.function?.name||'')||typeof t.function?.parameters!=='object'||!t.function.parameters)throw Error('AI_INVALID_INPUT');
-  return tools;
+  if(tools===undefined||tools===null)return [];
+  if(!Array.isArray(tools))throw Error('AI_INVALID_TOOL_SCHEMA');
+  if(tools.length>MAX_AGENT_TOOLS)throw Error('AI_TOO_MANY_TOOLS');
+  checkSize(tools,59000,'AI_TOOL_SCHEMA_TOO_LARGE');
+  return tools.map(t=>{
+    if(t?.type!=='function'||!/^[-A-Za-z0-9_]{1,64}$/.test(t.function?.name||''))
+      throw Error('AI_INVALID_TOOL_SCHEMA');
+    const params=t.function.parameters??{type:'object',properties:{}};
+    if(!params||typeof params!=='object'||Array.isArray(params))
+      throw Error('AI_INVALID_TOOL_SCHEMA');
+    return {...t,function:{...t.function,parameters:params}};
+  });
 }
 function toResponsesInput(messages){
   const input=[];
