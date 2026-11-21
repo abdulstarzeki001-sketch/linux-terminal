@@ -3,7 +3,7 @@
 // This does not add GPU hosting or bypass upstream provider requirements.
 const crypto = require('node:crypto');
 const MODEL_ID = 'star-ai';
-const MAX_BODY_BYTES = 65536;
+const MAX_BODY_BYTES = 196608;
 const MAX_PROMPT = 4000;
 
 function safeEqual(left, right) {
@@ -120,12 +120,13 @@ function createMinisHandler({env = process.env, ask, complete, configured}) {
         // Never expose the upstream API key, provider URL, or raw exception.
         const code = /^AI_[A-Z_]+$/.test(error?.message || '') ? error.message : 'AI_UPSTREAM_ERROR';
         const statuses = {
-          AI_AUTH_FAILED:503, AI_BILLING_REQUIRED:402,
+          AI_INVALID_INPUT:400, AI_AUTH_FAILED:503, AI_BILLING_REQUIRED:402,
           AI_QUOTA_EXCEEDED:429, AI_RATE_LIMIT:429,
           AI_MODEL_ERROR:424, AI_REQUEST_REJECTED:424,
           AI_TIMEOUT:504
         };
         const descriptions = {
+          AI_INVALID_INPUT:'Unsupported or oversized chat messages or tool definitions',
           AI_AUTH_FAILED:'Upstream model API key rejected; check AI_API_KEY on Railway',
           AI_BILLING_REQUIRED:'Upstream model billing is required',
           AI_QUOTA_EXCEEDED:'Upstream model quota or credits exhausted',
