@@ -123,7 +123,11 @@ function createMinisHandler({env = process.env, ask, complete, configured}) {
           AI_AUTH_FAILED:503, AI_BILLING_REQUIRED:402,
           AI_QUOTA_EXCEEDED:429, AI_RATE_LIMIT:429,
           AI_MODEL_ERROR:424, AI_REQUEST_REJECTED:424,
-          AI_TIMEOUT:504
+          AI_TIMEOUT:504, AI_INVALID_INPUT:400, AI_INVALID_MESSAGE_FORMAT:400,
+          AI_INVALID_TOOL_MESSAGE:400, AI_INVALID_TOOL_SCHEMA:400,
+          AI_UNSUPPORTED_MODALITY:415, AI_TOO_MANY_MESSAGES:413,
+          AI_TOO_MANY_TOOLS:413, AI_MESSAGE_TOO_LARGE:413,
+          AI_TOOL_SCHEMA_TOO_LARGE:413
         };
         const descriptions = {
           AI_AUTH_FAILED:'Upstream model API key rejected; check AI_API_KEY on Railway',
@@ -134,7 +138,16 @@ function createMinisHandler({env = process.env, ask, complete, configured}) {
           AI_REQUEST_REJECTED:'Upstream provider rejected the request format or model settings',
           AI_NETWORK_ERROR:'Upstream model network error',
           AI_TIMEOUT:'Upstream model timed out',
-          AI_UPSTREAM_ERROR:'Upstream model provider is unavailable'
+          AI_UPSTREAM_ERROR:'Upstream model provider is unavailable',
+          AI_INVALID_INPUT:'The model request could not be validated',
+          AI_INVALID_MESSAGE_FORMAT:'Minis sent unsupported message format',
+          AI_INVALID_TOOL_MESSAGE:'Minis sent invalid tool call history',
+          AI_INVALID_TOOL_SCHEMA:'Minis sent invalid function-tool schema',
+          AI_UNSUPPORTED_MODALITY:'This STAR AI gateway accepts text only',
+          AI_TOO_MANY_MESSAGES:'Minis sent too many messages for this gateway',
+          AI_TOO_MANY_TOOLS:'Minis sent too many tools for this gateway',
+          AI_MESSAGE_TOO_LARGE:'Minis message history is too large',
+          AI_TOOL_SCHEMA_TOO_LARGE:'Minis tool definitions are too large'
         };
         const status=statuses[code]||502;
         // Error codes only. Never log API keys, request text or raw provider errors.
