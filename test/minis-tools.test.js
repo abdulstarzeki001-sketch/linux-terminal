@@ -46,3 +46,45 @@ test('MCP refuses unsafe path and arbitrary shell',async()=>{
    }
  });
 });
+test('Minis text part messages and returned shell tool output pass to the upstream model',async()=>{
+ const {checkedMessages}=require('../ai-gateway/minis-provider');
+ const messages=[
+   {role:'user',content:[{type:'text',text:'Read Python version'}]},
+   {role:'assistant',content:null,tool_calls:[{id:'call_1',type:'function',function:{name:'shell_read',arguments:'{}'}}]},
+   {role:'tool',tool_call_id:'call_1',content:[{type:'text',text:'Python 3.12.16'}]}
+ ];
+ assert.equal(checkedMessages(messages)[0].content,'Read Python version');
+ let upstream;
+ const env={AI_ENABLED:'1',AI_API_KEY:'unit-test-openai-valid-fake-key',AI_MODEL:'gpt-4.1'};
+ const result=await completeForMinis({messages},{env,fetchFn:async(_url,options)=>{
+   upstream=JSON.parse(options.body);
+   return {ok:true,json:async()=>({output:[{type:'message',content:[{type:'output_text',text:'Verified version'}]}]})};
+ }});
+ assert.equal(upstream.input.find(x=>x.type==='function_call_output').output,'Python 3.12.16');
+ assert.equal(result.message.content,'Verified version');
+});
+test('Minis accepts bounded large tool schemas and rejects unsupported media blocks',()=>{
+ const {checkedTools,checkedMessages}=require('../ai-gateway/minis-provider');
+ const tools=Array.from({length:35},(_,i)=>({type:'function',function:{
+   name:'tool_'+i,description:'documentation '.repeat(60),parameters:{type:'object',properties:{}}
+ }}));
+ assert.ok(JSON.stringify(tools).length>22000);
+ assert.equal(checkedTools(tools).length,35);
+ assert.throws(()=>checkedMessages([{role:'user',content:[{type:'image_url',image_url:{url:'data:image/png;base64,abc'}}]}]),/AI_INVALID_INPUT/);
+ assert.throws(()=>checkedMessages(Array.from({length:97},()=>({role:'user',content:'hello'}))),/AI_INVALID_INPUT/);
+ assert.throws(()=>checkedTools(Array.from({length:65},()=>tools[0])),/AI_INVALID_INPUT/);
+});
+test('Minis returns HTTP 400 for unsupported client message format, not misleading 502',async()=>{
+ const h=createMinisHandler({env:{STAR_MINIS_API_KEY:MINIS_KEY},configured:()=>true,complete:async()=>{
+   throw Error('AI_INVALID_INPUT');
+ }});
+ await host(h,async url=>{
+   const r=await fetch(url+'/v1/chat/completions',{method:'POST',
+     headers:{Authorization:'Bearer '+MINIS_KEY,'Content-Type':'application/json'},
+     body:JSON.stringify({model:'star-ai',messages:[{role:'user',content:'hi'}]})
+   });
+   assert.equal(r.status,400);
+   const payload=await r.json();
+   assert.equal(payload.error.code,'AI_INVALID_INPUT');
+ });
+});
